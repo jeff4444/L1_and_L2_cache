@@ -3,7 +3,7 @@ module L1_cache #(
     parameter ADDR_WIDTH = 32,
     parameter CACHE_SIZE = 1024,
     parameter BLOCK_SIZE = 16,
-    parameter NUM_WAYS = 4,
+    parameter NUM_WAYS = 4
 )(
     input wire clk,
     input wire rst_n,
@@ -24,7 +24,7 @@ module L1_cache #(
     output reg l2_cache_read,
     output reg l2_cache_write,
     input wire l2_cache_ready,
-    input wire l2_cache_hit,
+    input wire l2_cache_hit
 );
     localparam NUM_BLOCKS = CACHE_SIZE / BLOCK_SIZE;
     localparam NUM_SETS = NUM_BLOCKS / NUM_WAYS;
