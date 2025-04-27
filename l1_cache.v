@@ -155,5 +155,4 @@ module L1_cache #(
             endcase
         end
     end
-    
 endmodule
