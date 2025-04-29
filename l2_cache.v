@@ -28,10 +28,10 @@ module L2_cache #(
 );
     //Module constants
     localparam block_num = CACHE_SIZE/BLOCK_SIZE;
-    localparam set_num = CACHE_SIZE / NUM_WAYS;
+    localparam set_num = NUM_BLOCKS / NUM_WAYS;
     localparam index_width = $clog2(set_num);
     localparam offset_width = $clog2(BLOCK_SIZE);
-    localparam tag_width = DATA_WIDTH - index_width - offset_width;
+    localparam tag_width = ADDR_WIDTH - index_width - offset_width;
 
     //FSM-Sates
     reg [1:0]next_state, curr_state;
@@ -53,7 +53,7 @@ module L2_cache #(
     //We need to give index, byte_offset and tag thier respective values
     assign tag = l1_cache_addr[DATA_WIDTH-1:index_width + offset_width];
     assign index = l1_cache_addr[DATA_WIDTH - tag_width - 1:offset_width];
-    assign byte_offset = l1_cache_addr[offset_width-1:0]
+    assign byte_offset = l1_cache_addr[offset_width-1:0];
 
     //L2 detection
     reg l2_hit;
@@ -98,7 +98,7 @@ module L2_cache #(
                         if(VALIDS[index][ii] && (TAGS[index][ii] == tag))begin
                             l2_hit <= 1'b1;
                             l1_cache_hit <= 1'b1;
-                            l1_cache_data_out <= DATAS[index][i];
+                            l1_cache_data_out <= DATAS[index][ii];
                         end 
                     end 
                     if(l2_hit)begin
@@ -107,7 +107,6 @@ module L2_cache #(
                         mem_addr <= l1_cache_addr;
                         mem_read <= 1'b1;
                     end
-                end  
 
                     if(l2_hit)begin
                         next_state <= IDLE;
@@ -116,6 +115,7 @@ module L2_cache #(
                     end else begin
                         next_state <= WRITE_ALLOCATE;
                     end 
+                end   
                 WRITE_ALLOCATE: begin
                     update = 1'b0;
                     if(mem_ready)begin
@@ -133,7 +133,7 @@ module L2_cache #(
                             VALIDS[index][0] <= 1'b1;
                             DATAS[index][0] <= mem_data_in;
                         end 
-                        l1_cache_ready <= 1'b1
+                        l1_cache_ready <= 1'b1;
                         l1_cache_hit <= 1'b0; //Fetched from Mem 
                     end
                     if(mem_ready)begin
