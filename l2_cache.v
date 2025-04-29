@@ -78,28 +78,73 @@ module L2_cache #(
             mem_data_out <= 0;
             mem_addr <= 0;
         end 
-        case(curr_state)
-            IDLE: begin
-                mem_read <= 0;
-                mem_write <= 0;
-                l1_cache_ready <= 0;
-                l1_cache_hit <= 0;
-                if(l1_cache_read || l1_cache_write)begin
-                    next_state <= TAG_CHECK;
+        else begin
+            case(curr_state)
+                IDLE: begin
+                    mem_read <= 0;
+                    mem_write <= 0;
+                    l1_cache_ready <= 0;
+                    l1_cache_hit <= 0;
+                    if(l1_cache_read || l1_cache_write)begin
+                        next_state <= TAG_CHECK;
+                    end 
+                    else begin
+                        next_state <= IDLE;
+                    end 
                 end 
-                else begin
-                    next_state <= IDLE;
+                TAG_CHECK: begin
+                    l1_cache_hit <= 0;
+                    for(ii = 0; ii < NUM_WAYS; ii = ii + 1)begin
+                        if(VALIDS[index][ii] && (TAGS[index][ii] == tag))begin
+                            l2_hit <= 1'b1;
+                            l1_cache_hit <= 1'b1;
+                            l1_cache_data_out <= DATAS[index][i];
+                        end 
+                    end 
+                    if(l2_hit)begin
+                        l1_cache_ready <= 1'b1;
+                    end else begin
+                        mem_addr <= l1_cache_addr;
+                        mem_read <= 1'b1;
+                    end
+                end  
+
+                    if(l2_hit)begin
+                        next_state <= IDLE;
+                    end else if (mem_hit) begin
+                        next_state <= IDLE;
+                    end else begin
+                        next_state <= WRITE_ALLOCATE;
+                    end 
+                WRITE_ALLOCATE: begin
+                    update = 1'b0;
+                    if(mem_ready)begin
+                        for(ii = 0; ii < NUM_WAYS; ii = ii + 1)begin
+                            if(!VALIDS[index][ii] && ! update)begin
+                                TAGS[index][ii] <= tag;
+                                VALIDS[index][ii] <= 1'b1;
+                                DATAS[index][ii] <= mem_data_in;
+                                update <= 1'b1;
+                            end 
+                        end 
+                        if(!update)begin
+                            //If !update after the for loop this means that all the blocks are full 
+                            TAGS[index][0] <= tag;
+                            VALIDS[index][0] <= 1'b1;
+                            DATAS[index][0] <= mem_data_in;
+                        end 
+                        l1_cache_ready <= 1'b1
+                        l1_cache_hit <= 1'b0; //Fetched from Mem 
+                    end
+                    if(mem_ready)begin
+                        next_state <= IDLE;
+                    end else begin
+                        next_state <= WRITE_ALLOCATE;
+                    end 
                 end 
-            end 
-            TAG_CHECK: begin
-                l2_cache_hit <= 0;
-                for(ii = 0; ii < NUM_WAYS; ii = ii + 1)begin
-                    if(VALIDS[index][i] && (TAGS[index][i] == tag))begin
-                        l2_cache_hit <= 1;
-                        
-
-
-
-
-    
+                default: next_state <= IDLE;
+            endcase
+        end 
+    end 
+                          
 endmodule
