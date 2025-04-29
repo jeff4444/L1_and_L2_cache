@@ -3,7 +3,7 @@ module L2_cache #(
     parameter ADDR_WIDTH = 32,
     parameter CACHE_SIZE = 1024,
     parameter BLOCK_SIZE = 32,
-    parameter NUM_WAYS = 4,
+    parameter NUM_WAYS = 4
 ) (
     input wire clk,
     input wire rst_n,
@@ -24,11 +24,10 @@ module L2_cache #(
     output reg mem_read,
     output reg mem_write,
     input wire mem_ready,
-    input wire mem_hit
 );
     //Module constants
     localparam block_num = CACHE_SIZE/BLOCK_SIZE;
-    localparam set_num = NUM_BLOCKS / NUM_WAYS;
+    localparam set_num = block_num / NUM_WAYS;
     localparam index_width = $clog2(set_num);
     localparam offset_width = $clog2(BLOCK_SIZE);
     localparam tag_width = ADDR_WIDTH - index_width - offset_width;
@@ -46,19 +45,19 @@ module L2_cache #(
     reg [NUM_WAYS-1:0] VALIDS[set_num-1:0];
 
     //Address calculations
-    reg[offset_width-1:0] byte_offset;
-    reg[index_width-1:0] index;
-    reg[tag_width-1:0] tag;
+    wire[offset_width-1:0] byte_offset;
+    wire[index_width-1:0] index;
+    wire[tag_width-1:0] tag;
 
     //We need to give index, byte_offset and tag thier respective values
-    assign tag = l1_cache_addr[DATA_WIDTH-1:index_width + offset_width];
-    assign index = l1_cache_addr[DATA_WIDTH - tag_width - 1:offset_width];
+    assign tag = l1_cache_addr[ADDR_WIDTH-1:index_width + offset_width];
+    assign index = l1_cache_addr[offset_width + index_width -1 :offset_width];
     assign byte_offset = l1_cache_addr[offset_width-1:0];
 
     //L2 detection
     reg l2_hit;
     reg update;
-    reg ii;
+    integer ii;
     
     always@(posedge clk or negedge rst_n)begin
         if(!rst_n)begin
@@ -72,19 +71,24 @@ module L2_cache #(
     always@(posedge clk or negedge rst_n)begin
         if(!rst_n)begin
             l1_cache_ready <= 1'b0;
-            l1_cache_hit <= 0;
+            l1_cache_hit <= 1'b0;
             mem_read <= 1'b0;
             mem_write <= 1'b0;
-            mem_data_out <= 0;
-            mem_addr <= 0;
-        end 
+            mem_data_out <= {DATA_WIDTH_WIDTH{1'b0}};
+            mem_addr <= {ADDR_WIDTH{1'b0}};
+            // Invalidate all lines
+            for (i = 0; i < SET_NUM; i = i + 1)begin
+                valid[i] <= {NUM_WAYS{1'b0}};
+            end 
         else begin
+            l1_cache_ready <= 1'b0;
+            mem_read       <= 1'b0;
+            mem_write      <= 1'b0;
+            l2_hit         <= 1'b0;
+            update         <= 1'b0;
+            l1_cache_hit   <= 1'b0;
             case(curr_state)
                 IDLE: begin
-                    mem_read <= 0;
-                    mem_write <= 0;
-                    l1_cache_ready <= 0;
-                    l1_cache_hit <= 0;
                     if(l1_cache_read || l1_cache_write)begin
                         next_state <= TAG_CHECK;
                     end 
@@ -102,22 +106,16 @@ module L2_cache #(
                         end 
                     end 
                     if(l2_hit)begin
+                        //hit return data
                         l1_cache_ready <= 1'b1;
+                        next_state <= IDLE;
                     end else begin
                         mem_addr <= l1_cache_addr;
                         mem_read <= 1'b1;
-                    end
-
-                    if(l2_hit)begin
-                        next_state <= IDLE;
-                    end else if (mem_hit) begin
-                        next_state <= IDLE;
-                    end else begin
                         next_state <= WRITE_ALLOCATE;
-                    end 
+                    end
                 end   
                 WRITE_ALLOCATE: begin
-                    update = 1'b0;
                     if(mem_ready)begin
                         for(ii = 0; ii < NUM_WAYS; ii = ii + 1)begin
                             if(!VALIDS[index][ii] && ! update)begin
@@ -135,12 +133,12 @@ module L2_cache #(
                         end 
                         l1_cache_ready <= 1'b1;
                         l1_cache_hit <= 1'b0; //Fetched from Mem 
-                    end
-                    if(mem_ready)begin
                         next_state <= IDLE;
-                    end else begin
+                    end
+                    else begin
                         next_state <= WRITE_ALLOCATE;
                     end 
+                    
                 end 
                 default: next_state <= IDLE;
             endcase
