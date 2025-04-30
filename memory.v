@@ -16,13 +16,17 @@ module memory #(
 );
     reg [DATA_WIDTH-1:0] memory [0:(1 << ADDR_WIDTH) - 1]; // Memory array
 
+    localparam BLOCK_BITS = $clog2(BLOCK_SIZE);
+
+    reg [ADDR_WIDTH - 1:0] block_start = {addr[ADDR_WIDTH - 1:BLOCK_BITS], BLOCK_BITS{1'b0}};
+
     // Mem read operation
     always @(posedge clk) begin
         if (!rst_n) begin
             ready <= 1'b0;
         end else if (read) begin
             for (integer i = 0; i < BLOCK_SIZE; i = i + 1) begin
-                data_out[i] <= memory[addr + i];
+                data_out[i] <= memory[block_start + i];
             end
             ready <= 1'b1;
         end else begin
