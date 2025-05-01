@@ -19,8 +19,8 @@ module L1_cache #(
     
     // L2 Cache interface
     output reg [ADDR_WIDTH-1:0] l2_cache_addr,
-    output reg [DATA_WIDTH-1:0] l2_cache_data_out, // Data to be written to l2 cache
-    input wire [DATA_WIDTH-1:0] l2_cache_data_in, // Data read from l2 cache
+    output reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_out, // Data to be written to l2 cache
+    input wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_in, // Data read from l2 cache
     output reg l2_cache_read,
     output reg l2_cache_write,
     input wire l2_cache_ready,
@@ -34,8 +34,8 @@ module L1_cache #(
 
     // cache line structure
     reg [TAG_WIDTH-1:0] tags[NUM_SETS-1:0][NUM_WAYS-1:0];
-    reg [DATA_WIDTH-1:0] data[NUM_SETS-1:0][NUM_WAYS-1:0];
-    reg [NUM_WAYS-1:0] valid[NUM_SETS-1:0];
+    reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] data[NUM_SETS-1:0][NUM_WAYS-1:0];
+    reg valid[NUM_SETS-1:0][NUM_WAYS-1:0];
 
     // cache controller state
     reg [1:0] state, next_state;
@@ -107,6 +107,12 @@ module L1_cache #(
             l2_cache_write <= 1'b0;
             l2_cache_addr <= 0;
             l2_cache_data_out <= 0;
+
+            // reset tags
+
+            // reset data
+
+            // reset valid
         end else begin
             case (state)
                 IDLE: begin
@@ -121,7 +127,7 @@ module L1_cache #(
                         if (valid[index][i] && (tags[index][i] == tag)) begin
                             hit = 1'b1;
                             cpu_hit <= 1'b1;
-                            cpu_data_out <= data[index][i];
+                            cpu_data_out <= data[index][i][byte_offset];
                         end
                     end
                     if (hit) begin
