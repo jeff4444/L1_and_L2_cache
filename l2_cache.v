@@ -137,8 +137,7 @@ module L2_cache #(
                     end
                     else begin
                         next_state <= WRITE_ALLOCATE;
-                    end 
-                    
+                    end                    
                 end 
                 default: next_state <= IDLE;
             endcase
