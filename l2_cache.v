@@ -23,7 +23,7 @@ module L2_cache #(
     input wire [DATA_WIDTH-1:0] mem_data_in, // Data read from memory
     output reg mem_read,
     output reg mem_write,
-    input wire mem_ready,
+    input wire mem_ready
 );
     //Module constants
     localparam block_num = CACHE_SIZE/BLOCK_SIZE;
@@ -41,7 +41,7 @@ module L2_cache #(
     localparam WRITE_ALLOCATE = 2'b11; 
 
     //L2 cache 
-    reg [tag_width-1:0]     TAGS[0:set_num-1][0:NUM_WAYS]; //Tag 2d vector reg
+    reg [tag_width-1:0]     TAGS[0:set_num-1][0:NUM_WAYS-1]; //Tag 2d vector reg
     reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:words_per_block]; //Data 2D vector reg
     reg                     VALIDS[0:set_num-1][0:NUM_WAYS-1];
 
@@ -59,7 +59,7 @@ module L2_cache #(
     reg l2_hit;
     reg update;
     integer ii;
-    reg [$clog2(WORDS_PER_BLOCK)-1:0] beat_cnt;
+    reg [$clog2(words_per_block)-1:0] beat_cnt;
     reg [$clog2(NUM_WAYS)-1:0] alloc_way;
 
 
@@ -82,9 +82,9 @@ module L2_cache #(
             //mem_data_out <= {DATA_WIDTH{1'b0}};
             mem_addr <= {ADDR_WIDTH{1'b0}};
             // Invalidate all lines
-            for (i = 0; i < SET_NUM; i = i + 1)begin
+            for (ii = 0; ii < set_num; ii = ii + 1)begin
                 for(alloc_way = 0; alloc_way < NUM_WAYS; alloc_way = alloc_way +1)
-                valid[i][alloc_way] <= 1'b0;
+                VALIDS[ii][alloc_way] <= 1'b0;
             end 
         end 
         else begin
@@ -117,11 +117,11 @@ module L2_cache #(
                         l1_cache_ready <= 1'b1;
                         next_state <= IDLE;
                     end else begin
-                        mem_addr <= {tag, index, {OFFSET-WIDTH{1'b0}}};
-                        beat_cnd <= 0;
+                        mem_addr <= {tag, index, {offset_width{1'b0}}};
+                        beat_cnt <= 0;
                         //We choose a way: first invalid or way 0
                         for(alloc_way = 0; alloc_way < NUM_WAYS; alloc_way = alloc_way +1) begin
-                            if(!valid[index][alloc_way] && !update) begin
+                            if(!VALIDS[index][alloc_way] && !update) begin
                                 update <= 1'b1;
                             end 
                         end 
@@ -139,8 +139,8 @@ module L2_cache #(
                         DATAS[index][alloc_way][beat_cnt] <= mem_data_in;
                         if(beat_cnt == words_per_block-1)begin
                             //Done fetching full block
-                            TAGS[index][ii] <= tag;
-                            VALIDS[index][ii] <= 1'b1;
+                            TAGS[index][alloc_way] <= tag;
+                            VALIDS[index][alloc_way] <= 1'b1;
                             l1_cache_ready <= 1'b1;
                             l1_cache_hit <= 1'b0;
                             next_state <= IDLE;
