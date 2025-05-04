@@ -9,9 +9,9 @@ module L2_cache #(
     input wire rst_n,
     
     // L1 Cache interface
-    input wire [ADDR_WIDTH-1:0] l1_cache_addr,
-    input wire [DATA_WIDTH-1:0] l1_cache_data_in,
-    output reg [DATA_WIDTH*(BLOCK_SIZE/(DATA_WIDTH/8))-1:0] l1_block_data_out,
+    input wire [ADDR_WIDTH-1:0] l1_cache_addr, //This is the address from the L1 cache 
+    input wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_cache_data_in,   //This is the data from the L1 in write scenarios 
+    output reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_block_data_out,  //This is the block data to be transferred out
     output reg l1_block_valid,
     input wire l1_cache_read,
     input wire l1_cache_write,
@@ -19,12 +19,13 @@ module L2_cache #(
     output reg l1_cache_hit,
     
     // Memory interface
-    output reg [ADDR_WIDTH-1:0] mem_addr,
-    output reg [DATA_WIDTH-1:0] mem_data_out, // Data to be written to memory
-    input  wire [DATA_WIDTH*(BLOCK_SIZE/(DATA_WIDTH/8))-1:0] mem_data_block,
-    output reg mem_read,
-    output reg mem_write,
-    input wire mem_ready
+    input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0]    mem_data_block,
+    input wire                                      mem_ready,
+    output reg  [ADDR_WIDTH-1:0]                    mem_addr, //Memory address
+    output reg  [DATA_WIDTH-1:0][DATA_WIDTH-1:0]    mem_data_out, 
+    output reg                                      mem_read,
+    output reg                                      mem_write
+    
 );
     //Module constants
     localparam block_num = CACHE_SIZE/BLOCK_SIZE;
@@ -42,19 +43,19 @@ module L2_cache #(
     localparam WRITE_ALLOCATE = 2'b11; 
 
     //L2 cache 
-    reg [tag_width-1:0]     TAGS[0:set_num-1][0:NUM_WAYS-1]; //Tag 2d vector reg
-    reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:words_per_block-1]; //Data 2D vector reg
-    reg                     VALIDS[0:set_num-1][0:NUM_WAYS-1];
+    reg [tag_width-1:0]                     TAGS   [set_num-1:0][NUM_WAYS-1:0]; //Tag 2d vector reg
+    reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0]    DATAS  [set_num-1:0][NUM_WAYS-1:0]; 
+    reg                                     VALIDS [set_num-1:0][NUM_WAYS-1:0];
 
     //Address calculations
-    wire[offset_width-1:0] byte_offset;
-    wire[index_width-1:0] index;
-    wire[tag_width-1:0] tag;
+    wire    [offset_width-1:0]  byte_offset;
+    wire    [index_width-1:0]   index;
+    wire    [tag_width-1:0]     tag;
 
     //We need to give index, byte_offset and tag thier respective values
-    assign tag = l1_cache_addr[ADDR_WIDTH-1:index_width + offset_width];
-    assign index = l1_cache_addr[offset_width + index_width -1 :offset_width];
-    assign byte_offset = l1_cache_addr[offset_width-1:0];
+    assign tag          = l1_cache_addr[ADDR_WIDTH-1:index_width + offset_width];
+    assign index        = l1_cache_addr[offset_width + index_width -1 :offset_width];
+    assign byte_offset  = l1_cache_addr[offset_width-1:0];
 
     //Miss handling helpers
     reg l2_hit;
@@ -115,8 +116,8 @@ module L2_cache #(
                             l2_hit <= 1'b1;
                             l1_cache_hit <= 1'b1;
                             l1_block_data_out <= {
-                                DATAS[index][ii][0], DATAS[index][ii][1], DATAS[index][ii][2], DATAS[index][ii][3],
-                                DATAS[index][ii][4], DATAS[index][ii][5], DATAS[index][ii][6], DATAS[index][ii][7]    
+                                DATAS[index][ii], DATAS[index][ii], DATAS[index][ii], DATAS[index][ii],
+                                DATAS[index][ii], DATAS[index][ii], DATAS[index][ii], DATAS[index][ii]    
                             };
                             l1_block_valid <= 1'b1;
                         end 
@@ -145,8 +146,7 @@ module L2_cache #(
                     mem_read <= 1'b1;
                     if(mem_ready) begin
                         //write entire block
-                        for(ii = 0; ii < words_per_block; ii = ii + 1)
-                            DATAS[index][alloc_way][ii] <= mem_data_block[ii*DATA_WIDTH +: DATA_WIDTH];
+                        DATAS[index][alloc_way] <= mem_data_block;
                         TAGS[index][alloc_way]      <= tag;
                         VALIDS[index][alloc_way]    <= 1'b1;
                         //forward to L1
