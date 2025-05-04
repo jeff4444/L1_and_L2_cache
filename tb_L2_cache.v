@@ -7,9 +7,9 @@ module tb_L2_cache;
   localparam CACHE_SIZE      = 512;
   localparam BLOCK_SIZE      = 32;
   localparam NUM_WAYS        = 4;
-  localparam WORDS_PER_BLOCK = BLOCK_SIZE/(DATA_WIDTH/8);       // 8
-  localparam NUM_BLOCKS      = CACHE_SIZE/BLOCK_SIZE;           // 16
-  localparam OFFSET_WIDTH    = $clog2(BLOCK_SIZE);              // 5
+  localparam words_per_block = BLOCK_SIZE/(DATA_WIDTH/8);       // 8
+  localparam block_num      = CACHE_SIZE/BLOCK_SIZE;           // 16
+  localparam offset_width    = $clog2(BLOCK_SIZE);              // 5
 
   // Clock & reset
   reg clk = 0;
@@ -20,7 +20,7 @@ module tb_L2_cache;
   // L1⇄L2 interface
   reg  [ADDR_WIDTH-1:0] l1_cache_addr;
   reg  [DATA_WIDTH-1:0] l1_cache_data_in;
-  wire [DATA_WIDTH*WORDS_PER_BLOCK-1:0] l1_block_data_out;
+  wire [DATA_WIDTH*words_per_block-1:0] l1_block_data_out;
   wire                          l1_block_valid;
   reg                           l1_cache_read;
   reg                           l1_cache_write;
@@ -31,7 +31,7 @@ module tb_L2_cache;
   wire [ADDR_WIDTH-1:0]         mem_addr;
   wire                          mem_read;
   reg                           mem_ready;
-  reg  [DATA_WIDTH*WORDS_PER_BLOCK-1:0] mem_data_block;
+  reg  [DATA_WIDTH*words_per_block-1:0] mem_data_block;
   wire                          mem_write;
   wire [DATA_WIDTH-1:0]         mem_data_out;
 
@@ -62,12 +62,12 @@ module tb_L2_cache;
   );
 
   // Model of main memory blocks
-  reg [DATA_WIDTH*WORDS_PER_BLOCK-1:0] mem_model [0:NUM_BLOCKS-1];
+  reg [DATA_WIDTH*words_per_block-1:0] mem_model [0:block_num-1];
   integer blk, w;
   initial begin
     // Fill each block with a distinctive pattern
-    for (blk = 0; blk < NUM_BLOCKS; blk = blk + 1) begin
-      for (w = 0; w < WORDS_PER_BLOCK; w = w + 1) begin
+    for (blk = 0; blk < block_num; blk = blk + 1) begin
+      for (w = 0; w < words_per_block; w = w + 1) begin
         mem_model[blk][w*DATA_WIDTH +: DATA_WIDTH] = (blk << 8) | w;
       end
     end
@@ -76,8 +76,8 @@ module tb_L2_cache;
   // Drive mem_data_block & mem_ready when the DUT asserts mem_read
   always @(posedge clk) begin
     if (mem_read) begin
-      // block index = mem_addr >> OFFSET_WIDTH
-      mem_data_block <= mem_model[mem_addr >> OFFSET_WIDTH];
+      // block index = mem_addr >> offset_width
+      mem_data_block <= mem_model[mem_addr >> offset_width];
       mem_ready      <= 1;
     end else begin
       mem_ready      <= 0;
