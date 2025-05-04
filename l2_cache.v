@@ -43,7 +43,7 @@ module L2_cache #(
 
     //L2 cache 
     reg [tag_width-1:0]     TAGS[0:set_num-1][0:NUM_WAYS-1]; //Tag 2d vector reg
-    reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:WORDS_PER_BLOCK-1];; //Data 2D vector reg
+    reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:words_per_blockK-1]; //Data 2D vector reg
     reg                     VALIDS[0:set_num-1][0:NUM_WAYS-1];
 
     //Address calculations
@@ -114,7 +114,7 @@ module L2_cache #(
                         if(VALIDS[index][ii] && (TAGS[index][ii] == tag))begin
                             l2_hit <= 1'b1;
                             l1_cache_hit <= 1'b1;
-                            l1_cache_data_out <= {
+                            l1_block_data_out <= {
                                 DATAS[index][ii][0], DATAS[index][ii][1], DATAS[index][ii][2], DATAS[index][ii][3],
                                 DATAS[index][ii][4], DATAS[index][ii][5], DATAS[index][ii][6], DATAS[index][ii][7]    
                             };
@@ -136,7 +136,7 @@ module L2_cache #(
                             alloc_way <= 0;
                         end 
 
-                        mem_addr   <= { tag, index, {OFFSET_WIDTH{1'b0}} };
+                        mem_addr   <= { tag, index, {offset_width{1'b0}} };
                         mem_read <= 1'b1;
                         next_state <= WRITE_ALLOCATE;
                     end
@@ -145,7 +145,7 @@ module L2_cache #(
                     mem_read <= 1'b1;
                     if(mem_ready) begin
                         //write entire block
-                        for(ii = 0; i < WORDS_PER_BLOCK; ii = ii + 1)
+                        for(ii = 0; ii < WORDS_PER_BLOCK; ii = ii + 1)
                             DATAS[index][alloc_way][ii] <= mem_data_block[ii*DATA_WIDTH +: DATA_WIDTH];
                         TAGS[index][alloc_way]      <= tag;
                         VALIDS[index][alloc_way]    <= 1'b1;
