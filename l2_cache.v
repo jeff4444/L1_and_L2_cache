@@ -1,7 +1,7 @@
 module L2_cache #(
     parameter DATA_WIDTH = 32,
-    parameter ADDR_WIDTH = 32,
-    parameter CACHE_SIZE = 1024,
+    parameter ADDR_WIDTH = 11,
+    parameter CACHE_SIZE = 512,
     parameter BLOCK_SIZE = 32,
     parameter NUM_WAYS = 4
 ) (
@@ -11,7 +11,8 @@ module L2_cache #(
     // L1 Cache interface
     input wire [ADDR_WIDTH-1:0] l1_cache_addr,
     input wire [DATA_WIDTH-1:0] l1_cache_data_in,
-    output reg [DATA_WIDTH-1:0] l1_cache_data_out,
+    output reg [DATA_WIDTH*(BLOCK_SIZE/(DATA_WIDTH/8))-1:0] l1_block_data_out,
+    output reg l1_block_valid,
     input wire l1_cache_read,
     input wire l1_cache_write,
     output reg l1_cache_ready,
@@ -20,7 +21,7 @@ module L2_cache #(
     // Memory interface
     output reg [ADDR_WIDTH-1:0] mem_addr,
     output reg [DATA_WIDTH-1:0] mem_data_out, // Data to be written to memory
-    input wire [DATA_WIDTH-1:0] mem_data_in, // Data read from memory
+    input  wire [DATA_WIDTH*(BLOCK_SIZE/(DATA_WIDTH/8))-1:0] mem_data_block,
     output reg mem_read,
     output reg mem_write,
     input wire mem_ready
@@ -42,7 +43,7 @@ module L2_cache #(
 
     //L2 cache 
     reg [tag_width-1:0]     TAGS[0:set_num-1][0:NUM_WAYS-1]; //Tag 2d vector reg
-    reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:words_per_block]; //Data 2D vector reg
+    reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:WORDS_PER_BLOCK-1];; //Data 2D vector reg
     reg                     VALIDS[0:set_num-1][0:NUM_WAYS-1];
 
     //Address calculations
@@ -59,7 +60,7 @@ module L2_cache #(
     reg l2_hit;
     reg update;
     integer ii;
-    reg [$clog2(words_per_block)-1:0] beat_cnt;
+    //reg [$clog2(words_per_block)-1:0] beat_cnt;
     reg [$clog2(NUM_WAYS)-1:0] alloc_way;
 
 
@@ -75,12 +76,14 @@ module L2_cache #(
 
     always@(posedge clk or negedge rst_n)begin
         if(!rst_n)begin
-            l1_cache_ready <= 1'b0;
-            l1_cache_hit <= 1'b0;
-            mem_read <= 1'b0;
-            mem_write <= 1'b0;
-            //mem_data_out <= {DATA_WIDTH{1'b0}};
-            mem_addr <= {ADDR_WIDTH{1'b0}};
+            l1_cache_ready  <= 1'b0;
+            l1_cache_hit    <= 1'b0;
+            l1_block_valid  <= 1'b0;
+            mem_read        <= 1'b0;
+            mem_write       <= 1'b0;
+            mem_data_out    <= {DATA_WIDTH{1'b0}};
+            mem_addr        <= {ADDR_WIDTH{1'b0}};
+            l1_block_data_out <= {DATA_WIDTH*(BLOCK_SIZE/(DATA_WIDTH/8)){1'b0}};
             // Invalidate all lines
             for (ii = 0; ii < set_num; ii = ii + 1)begin
                 for(alloc_way = 0; alloc_way < NUM_WAYS; alloc_way = alloc_way +1)
@@ -89,11 +92,13 @@ module L2_cache #(
         end 
         else begin
             l1_cache_ready <= 1'b0;
+            l1_block_valid <= 1'b0;
+            l1_cache_hit   <= 1'b0;
             mem_read       <= 1'b0;
-            //mem_write      <= 1'b0;
+            mem_write      <= 1'b0;
             l2_hit         <= 1'b0;
             update         <= 1'b0;
-            l1_cache_hit   <= 1'b0;
+            
             case(curr_state)
                 IDLE: begin
                     if(l1_cache_read || l1_cache_write)begin
@@ -104,12 +109,16 @@ module L2_cache #(
                     end 
                 end 
                 TAG_CHECK: begin
-                    l1_cache_hit <= 0;
+                    
                     for(ii = 0; ii < NUM_WAYS; ii = ii + 1)begin
                         if(VALIDS[index][ii] && (TAGS[index][ii] == tag))begin
                             l2_hit <= 1'b1;
                             l1_cache_hit <= 1'b1;
-                            l1_cache_data_out <= DATAS[index][ii][byte_offset[offset_width-1:2]];
+                            l1_cache_data_out <= {
+                                DATAS[index][ii][0], DATAS[index][ii][1], DATAS[index][ii][2], DATAS[index][ii][3],
+                                DATAS[index][ii][4], DATAS[index][ii][5], DATAS[index][ii][6], DATAS[index][ii][7]    
+                            };
+                            l1_block_valid <= 1'b1;
                         end 
                     end 
                     if(l2_hit)begin
@@ -117,8 +126,6 @@ module L2_cache #(
                         l1_cache_ready <= 1'b1;
                         next_state <= IDLE;
                     end else begin
-                        mem_addr <= {tag, index, {offset_width{1'b0}}};
-                        beat_cnt <= 0;
                         //We choose a way: first invalid or way 0
                         for(alloc_way = 0; alloc_way < NUM_WAYS; alloc_way = alloc_way +1) begin
                             if(!VALIDS[index][alloc_way] && !update) begin
@@ -129,6 +136,7 @@ module L2_cache #(
                             alloc_way <= 0;
                         end 
 
+                        mem_addr   <= { tag, index, {OFFSET_WIDTH{1'b0}} };
                         mem_read <= 1'b1;
                         next_state <= WRITE_ALLOCATE;
                     end
@@ -136,19 +144,17 @@ module L2_cache #(
                 WRITE_ALLOCATE: begin
                     mem_read <= 1'b1;
                     if(mem_ready) begin
-                        DATAS[index][alloc_way][beat_cnt] <= mem_data_in;
-                        if(beat_cnt == words_per_block-1)begin
-                            //Done fetching full block
-                            TAGS[index][alloc_way] <= tag;
-                            VALIDS[index][alloc_way] <= 1'b1;
-                            l1_cache_ready <= 1'b1;
-                            l1_cache_hit <= 1'b0;
-                            next_state <= IDLE;
-                        end else begin
-                            beat_cnt <= beat_cnt + 1;
-                            mem_addr <= mem_addr + (DATA_WIDTH/8);
-                            next_state <= WRITE_ALLOCATE;
-                        end 
+                        //write entire block
+                        for(ii = 0; i < WORDS_PER_BLOCK; ii = ii + 1)
+                            DATAS[index][alloc_way][ii] <= mem_data_block[ii*DATA_WIDTH +: DATA_WIDTH];
+                        TAGS[index][alloc_way]      <= tag;
+                        VALIDS[index][alloc_way]    <= 1'b1;
+                        //forward to L1
+
+                        l1_block_data_out <= mem_data_block;
+                        l1_block_valid <= 1'b1;
+                        l1_cache_ready <= 1'b1;
+                        next_state <= IDLE;
                     end else begin
                         next_state <= WRITE_ALLOCATE;
                     end 
