@@ -15,7 +15,7 @@ module L1_cache #(
     input wire cpu_read,
     input wire cpu_write,
     output reg cpu_ready,
-    output reg cpu_hit,
+    output l1_hit,
     
     // L2 Cache interface
     output reg [ADDR_WIDTH-1:0] l2_cache_addr,
@@ -37,13 +37,6 @@ module L1_cache #(
     reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] data[NUM_SETS-1:0][NUM_WAYS-1:0];
     reg valid[NUM_SETS-1:0][NUM_WAYS-1:0];
 
-    // cache controller state
-    reg [1:0] state, next_state;
-    localparam IDLE = 2'b00;
-    localparam COMPARE_TAG = 2'b01;
-    localparam WRITE_BACK = 2'b10;
-    localparam ALLOCATE = 2'b11;
-
     // decompose address into tag, index, and byte offset
     wire [INDEX_WIDTH-1:0] index;
     wire [BYTE_OFFSET_WIDTH-1:0] byte_offset;
@@ -58,107 +51,94 @@ module L1_cache #(
     reg hit;
     reg updated;
     integer i;
+    reg found;
+    reg [DATA_WIDTH-1:0] data_found;
+    reg reading_from_l2;
 
-    // state transition
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            state <= IDLE;
-        end else begin
-            state <= next_state;
+    assign l1_hit = hit;
+
+    // set found and data_found
+    always @(*) begin
+        found = 1'b0;
+        data_found = {DATA_WIDTH{1'b0}};
+        for (i = 0; i < NUM_WAYS; i = i + 1) begin
+            if (valid[index][i] && (tags[index][i] == tag)) begin
+                found = 1'b1;
+                data_found = data[index][i][byte_offset];
+            end
         end
     end
 
-    // next state logic
+    // set updated signal
     always @(*) begin
-        case (state)
-            IDLE: begin
-                if (cpu_read || cpu_write) begin
-                    next_state = COMPARE_TAG;
-                end else begin
-                    next_state = IDLE;
-                end
+        updated = 1'b0;
+        for (i = 0; i < NUM_WAYS; i = i + 1) begin
+            if (!valid[index][i]) begin
+                updated = 1'b1;
             end
-            COMPARE_TAG: begin
-                if (hit) begin
-                    next_state = IDLE;
-                end else if (l2_cache_hit) begin
-                    next_state = IDLE;
-                end else begin
-                    next_state = ALLOCATE;
-                end
-            end
-            ALLOCATE: begin
-                if (l2_cache_ready) begin
-                    next_state = IDLE;
-                end else begin
-                    next_state = ALLOCATE;
-                end
-            end
-            default: next_state = IDLE;
-        endcase
+        end
     end
 
-    // state actions
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge clk) begin
         if (!rst_n) begin
-            cpu_ready <= 1'b0;
-            cpu_hit <= 1'b0;
+            cpu_ready <= 1'b1;
             l2_cache_read <= 1'b0;
             l2_cache_write <= 1'b0;
             l2_cache_addr <= 0;
             l2_cache_data_out <= 0;
+            for (i = 0; i < NUM_SETS; i = i + 1) begin
+                for (integer j = 0; j < NUM_WAYS; j = j + 1) begin
+                    valid[i][j] <= 1'b0;
+                end
+            end 
+            reading_from_l2 <= 1'b0;
+        end else if (reading_from_l2) begin
+            if (l2_cache_ready) begin
+                l2_cache_read <= 1'b0;
+                l2_cache_write <= 1'b0;
+                l2_cache_addr <= {ADDR_WIDTH{1'b0}};
+                l2_cache_data_out <= l2_cache_data_in;
+                reading_from_l2 <= 1'b0;
 
-            // reset tags
+                // Write data to L1 cache
+                for (i = 0; i < NUM_WAYS; i = i + 1) begin
+                    if (!valid[index][i]) begin
+                        tags[index][i] <= tag;
+                        data[index][i] <= l2_cache_data_in;
+                        valid[index][i] <= 1'b1;
+                    end
+                end
 
-            // reset data
-
-            // reset valid
+                if (!updated) begin
+                    tags[index][0] <= tag;
+                    data[index][0] <= l2_cache_data_in;
+                    valid[index][0] <= 1'b1;
+                end
+                cpu_ready <= 1'b1;
+                cpu_data_out <= l2_cache_data_in[byte_offset];
+                hit <= 1'b1;
+            end
+        end else if (cpu_read) begin
+            if (found) begin
+                cpu_ready <= 1'b1;
+                hit <= 1'b1;
+                cpu_data_out <= data_found;
+                l2_cache_read <= 1'b0;
+                l2_cache_write <= 1'b0;
+            end else begin
+                cpu_ready <= 1'b0;
+                hit <= 1'b0;
+                l2_cache_read <= 1'b1;
+                l2_cache_write <= 1'b0;
+                l2_cache_addr <= cpu_addr;
+                reading_from_l2 <= 1'b1;
+            end
         end else begin
-            case (state)
-                IDLE: begin
-                    cpu_ready <= 1'b0;
-                    cpu_hit <= 1'b0;
-                    l2_cache_read <= 1'b0;
-                    l2_cache_write <= 1'b0;
-                end
-                COMPARE_TAG: begin
-                    hit = 1'b0;
-                    for (i = 0; i < NUM_WAYS; i = i + 1) begin
-                        if (valid[index][i] && (tags[index][i] == tag)) begin
-                            hit = 1'b1;
-                            cpu_hit <= 1'b1;
-                            cpu_data_out <= data[index][i][byte_offset];
-                        end
-                    end
-                    if (hit) begin
-                        cpu_ready <= 1'b1;
-                    end else begin
-                        l2_cache_addr <= cpu_addr;
-                        l2_cache_read <= 1'b1;
-                    end
-                end
-                ALLOCATE: begin
-                    updated = 1'b0;
-                    if (l2_cache_ready) begin
-                        for (i = 0; i < NUM_WAYS; i = i + 1) begin
-                            if (!valid[index][i] && !updated) begin
-                                tags[index][i] <= tag;
-                                data[index][i] <= l2_cache_data_in;
-                                valid[index][i] <= 1'b1;
-                                updated = 1'b1;
-                            end
-                        end
-                        if (!updated) begin
-                            // Evict a block (first block)
-                            tags[index][0] <= tag;
-                            data[index][0] <= l2_cache_data_in;
-                            valid[index][0] <= 1'b1;
-                        end
-                        cpu_ready <= 1'b1;
-                        cpu_hit <= 1'b0; // Not a hit since we had to fetch from L2
-                    end
-                end
-            endcase
+            $display("CPU write request: addr = %h, data = %h", cpu_addr, cpu_data_in);
         end
     end
+
+    
+
+    
 endmodule
