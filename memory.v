@@ -27,16 +27,18 @@ module memory #(
     // Mem read operation
     always @(posedge clk) begin
         if (!rst_n) begin
-            ready <= 1'b1;
+            ready <= 1'b0;
             hit <= 1'b0;
             data_out <= 0;
             for (integer i = 0; i < MEM_SIZE; i = i + 1) begin
                 mem[i] <= i;
             end
         end else if (read) begin
+            // $display("Read from memory: %h", addr);
             for (integer i = 0; i < BLOCK_SIZE; i = i + 1) begin
                 data_out[i] <= mem[block_start + i];
             end
+            $display("%0t [MEM] Mem hit: addr = %h, data = %h", $time, addr, mem[block_start]);
             ready <= 1'b1;
             hit <= 1'b1;
         end else begin
