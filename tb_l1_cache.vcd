@@ -1,0 +1,556 @@
+$date
+	Sat May  3 20:53:48 2025
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1ns
+$end
+$scope module tb_l1_cache $end
+$var wire 1 ! l2_cache_write $end
+$var wire 1 " l2_cache_ready $end
+$var wire 1 # l2_cache_read $end
+$var wire 1 $ l2_cache_hit $end
+$var wire 128 % l2_cache_data_out [127:0] $end
+$var wire 128 & l2_cache_data_in [127:0] $end
+$var wire 11 ' l2_cache_addr [10:0] $end
+$var wire 1 ( cpu_ready $end
+$var wire 8 ) cpu_data_out [7:0] $end
+$var parameter 32 * ADDR_WIDTH $end
+$var parameter 32 + BLOCK_SIZE $end
+$var parameter 32 , CACHE_SIZE $end
+$var parameter 32 - DATA_WIDTH $end
+$var parameter 32 . NUM_WAYS $end
+$var reg 1 / clk $end
+$var reg 11 0 cpu_addr [10:0] $end
+$var reg 8 1 cpu_data_in [7:0] $end
+$var reg 1 2 cpu_read $end
+$var reg 1 3 cpu_write $end
+$var reg 1 4 rst_n $end
+$scope module dut $end
+$var wire 1 / clk $end
+$var wire 11 5 cpu_addr [10:0] $end
+$var wire 8 6 cpu_data_in [7:0] $end
+$var wire 1 2 cpu_read $end
+$var wire 1 3 cpu_write $end
+$var wire 1 7 l1_hit $end
+$var wire 1 4 rst_n $end
+$var wire 5 8 tag [4:0] $end
+$var wire 1 " l2_cache_ready $end
+$var wire 1 $ l2_cache_hit $end
+$var wire 128 9 l2_cache_data_in [127:0] $end
+$var wire 2 : index [1:0] $end
+$var wire 4 ; byte_offset [3:0] $end
+$var parameter 32 < ADDR_WIDTH $end
+$var parameter 2 = ALLOCATE $end
+$var parameter 32 > BLOCK_SIZE $end
+$var parameter 32 ? BYTE_OFFSET_WIDTH $end
+$var parameter 32 @ CACHE_SIZE $end
+$var parameter 2 A COMPARE_TAG $end
+$var parameter 32 B DATA_WIDTH $end
+$var parameter 2 C IDLE $end
+$var parameter 32 D INDEX_WIDTH $end
+$var parameter 32 E NUM_BLOCKS $end
+$var parameter 32 F NUM_SETS $end
+$var parameter 32 G NUM_WAYS $end
+$var parameter 34 H TAG_WIDTH $end
+$var parameter 2 I WRITE_BACK $end
+$var reg 8 J cpu_data_out [7:0] $end
+$var reg 1 ( cpu_ready $end
+$var reg 1 K found $end
+$var reg 1 L hit $end
+$var reg 11 M l2_cache_addr [10:0] $end
+$var reg 128 N l2_cache_data_out [127:0] $end
+$var reg 1 # l2_cache_read $end
+$var reg 1 ! l2_cache_write $end
+$var reg 2 O next_state [1:0] $end
+$var reg 2 P state [1:0] $end
+$var reg 1 Q updated $end
+$var integer 32 R i [31:0] $end
+$scope begin $ivl_for_loop0 $end
+$var integer 32 S j [31:0] $end
+$upscope $end
+$upscope $end
+$scope module mem_inst $end
+$var wire 11 T addr [10:0] $end
+$var wire 1 / clk $end
+$var wire 128 U data_in [127:0] $end
+$var wire 1 # read $end
+$var wire 1 4 rst_n $end
+$var wire 1 ! write $end
+$var wire 11 V block_start [10:0] $end
+$var parameter 32 W ADDR_WIDTH $end
+$var parameter 32 X BLOCK_BITS $end
+$var parameter 32 Y BLOCK_SIZE $end
+$var parameter 32 Z DATA_WIDTH $end
+$var parameter 43 [ MEM_SIZE $end
+$var reg 128 \ data_out [127:0] $end
+$var reg 1 $ hit $end
+$var reg 1 " ready $end
+$scope begin $ivl_for_loop1 $end
+$var integer 32 ] i [31:0] $end
+$upscope $end
+$scope begin $ivl_for_loop2 $end
+$var integer 32 ^ i [31:0] $end
+$upscope $end
+$upscope $end
+$scope task cpu_request $end
+$var reg 11 _ addr [10:0] $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+$comment Show the parameter values. $end
+$dumpall
+b100000000000 [
+b1000 Z
+b10000 Y
+b100 X
+b1011 W
+b10 I
+b101 H
+b100 G
+b100 F
+b10000 E
+b10 D
+b0 C
+b1000 B
+b1 A
+b100000000 @
+b100 ?
+b10000 >
+b11 =
+b1011 <
+b100 .
+b1000 -
+b100000000 ,
+b10000 +
+b1011 *
+$end
+#0
+$dumpvars
+bx _
+bx ^
+bx ]
+bx \
+bx0000 V
+bx U
+bx T
+bx S
+b100 R
+0Q
+bx P
+b0 O
+bx N
+bx M
+xL
+0K
+bx J
+b0 ;
+b0 :
+bx 9
+b0 8
+x7
+b0 6
+b0 5
+04
+03
+02
+b0 1
+b0 0
+0/
+bx )
+x(
+bx '
+bx &
+bx %
+x$
+x#
+x"
+x!
+$end
+#5
+1Q
+b0 V
+07
+b0 P
+b0 %
+b0 N
+b0 U
+b0 '
+b0 M
+b0 T
+0!
+0#
+0L
+1(
+b0 &
+b0 9
+b0 \
+0$
+1"
+b100000000000 ]
+b100 S
+b100 R
+1/
+#10
+0/
+#15
+b100000000000 ]
+b100 S
+b100 R
+1/
+#20
+b1 O
+b1 ;
+12
+b1 0
+b1 5
+b1 _
+0/
+14
+#25
+b1 P
+b0 )
+b0 J
+0"
+b11 O
+02
+1/
+#30
+0/
+#35
+0(
+1#
+b11 P
+1/
+#40
+0/
+#45
+17
+b0 O
+1$
+1"
+b1111000011100000110100001100000010110000101000001001000010000000011100000110000001010000010000000011000000100000000100000000 &
+b1111000011100000110100001100000010110000101000001001000010000000011100000110000001010000010000000011000000100000000100000000 9
+b1111000011100000110100001100000010110000101000001001000010000000011100000110000001010000010000000011000000100000000100000000 \
+b1 '
+b1 M
+b1 T
+0#
+b10000 ^
+1/
+#50
+0/
+#55
+b0 ;
+b1 O
+12
+b0 0
+b0 5
+b0 _
+0Q
+1K
+07
+b1 )
+b1 J
+1(
+b0 '
+b0 M
+b0 T
+b0 P
+0$
+0"
+b100 R
+1/
+#60
+0/
+#65
+b1 P
+b0 )
+b0 J
+b0 O
+02
+1/
+#70
+0/
+#75
+17
+1L
+b0 P
+b100 R
+1/
+#80
+0/
+#85
+07
+0L
+b1 O
+b10 ;
+12
+b10 0
+b10 5
+b10 _
+1/
+#90
+0/
+#95
+b1 P
+b0 O
+02
+1/
+#100
+0/
+#105
+17
+b0 P
+b10 )
+b10 J
+1L
+b100 R
+1/
+#110
+0/
+#115
+07
+b0 )
+b0 J
+0L
+b1 O
+b101 ;
+12
+b101 0
+b101 5
+b101 _
+1/
+#120
+0/
+#125
+b1 P
+b0 O
+02
+1/
+#130
+0/
+#135
+17
+b101 )
+b101 J
+1L
+b0 P
+b100 R
+1/
+#140
+0/
+#145
+07
+b0 )
+b0 J
+0L
+1Q
+b100 R
+0K
+b1 O
+b1 :
+b0 ;
+12
+b10000 0
+b10000 5
+b10000 _
+1/
+#150
+0/
+#155
+b1 P
+b11 O
+02
+1/
+#160
+0/
+#165
+b10000 V
+b11 P
+0(
+1#
+b10000 '
+b10000 M
+b10000 T
+1/
+#170
+0/
+#175
+17
+b0 O
+1$
+1"
+b11111000111100001110100011100000110110001101000011001000110000001011100010110000101010001010000010011000100100001000100010000 &
+b11111000111100001110100011100000110110001101000011001000110000001011100010110000101010001010000010011000100100001000100010000 9
+b11111000111100001110100011100000110110001101000011001000110000001011100010110000101010001010000010011000100100001000100010000 \
+0#
+b10000 ^
+1/
+#180
+0/
+#185
+b100 ;
+b1 O
+12
+b10100 0
+b10100 5
+b10100 _
+0Q
+1K
+b0 V
+07
+b0 P
+b10000 )
+b10000 J
+1(
+b0 '
+b0 M
+b0 T
+0$
+0"
+b100 R
+1/
+#190
+0/
+#195
+b0 )
+b0 J
+b1 P
+b0 O
+02
+1/
+#200
+0/
+#205
+17
+b0 P
+b10100 )
+b10100 J
+1L
+b100 R
+1/
+#210
+0/
+#215
+07
+b0 )
+b0 J
+0L
+b1 O
+b1010 ;
+12
+b11010 0
+b11010 5
+b11010 _
+1/
+#220
+0/
+#225
+b1 P
+b0 O
+02
+1/
+#230
+0/
+#235
+17
+b11010 )
+b11010 J
+1L
+b0 P
+b100 R
+1/
+#240
+0/
+#245
+07
+b0 )
+b0 J
+0L
+b100 R
+0K
+b1 O
+b0 :
+b1 ;
+b100 8
+12
+b100000001 0
+b100000001 5
+b100000001 _
+1/
+#250
+0/
+#255
+b1 P
+b11 O
+02
+1/
+#260
+0/
+#265
+b100000000 V
+b11 P
+0(
+1#
+b100000000 '
+b100000000 M
+b100000000 T
+1/
+#270
+0/
+#275
+17
+b0 O
+1$
+1"
+b1111000011100000110100001100000010110000101000001001000010000000011100000110000001010000010000000011000000100000000100000000 &
+b1111000011100000110100001100000010110000101000001001000010000000011100000110000001010000010000000011000000100000000100000000 9
+b1111000011100000110100001100000010110000101000001001000010000000011100000110000001010000010000000011000000100000000100000000 \
+b100000001 '
+b100000001 M
+b100000001 T
+0#
+b10000 ^
+1/
+#280
+0/
+#285
+1K
+b100 R
+b0 V
+07
+b0 P
+1(
+b1 )
+b1 J
+b0 '
+b0 M
+b0 T
+0$
+0"
+1/
+#290
+0/
+#295
+b0 )
+b0 J
+1/
+#300
+0/
+#305
+1/
+#310
+0/
+#315
+1/
+#320
+0/
+#325
+1/
+#330
+0/
+#335
+1/
