@@ -43,7 +43,7 @@ module L2_cache #(
 
     //L2 cache 
     reg [tag_width-1:0]     TAGS[0:set_num-1][0:NUM_WAYS-1]; //Tag 2d vector reg
-    reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:words_per_blockK-1]; //Data 2D vector reg
+    reg [DATA_WIDTH-1:0]    DATAS[0: set_num-1][0:NUM_WAYS-1][0:words_per_block-1]; //Data 2D vector reg
     reg                     VALIDS[0:set_num-1][0:NUM_WAYS-1];
 
     //Address calculations
