@@ -145,7 +145,7 @@ module L2_cache #(
                     mem_read <= 1'b1;
                     if(mem_ready) begin
                         //write entire block
-                        for(ii = 0; ii < WORDS_PER_BLOCK; ii = ii + 1)
+                        for(ii = 0; ii < words_per_block; ii = ii + 1)
                             DATAS[index][alloc_way][ii] <= mem_data_block[ii*DATA_WIDTH +: DATA_WIDTH];
                         TAGS[index][alloc_way]      <= tag;
                         VALIDS[index][alloc_way]    <= 1'b1;
