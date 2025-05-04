@@ -104,7 +104,6 @@ module tb_l1_cache;
     cpu_addr = addr;
     cpu_read = 1;
     @(posedge clk);
-    cpu_read = 0;
   end
   endtask
 
@@ -132,39 +131,36 @@ module tb_l1_cache;
     cpu_request(11'h001);
     // Wait for the cache to assert a request to L2
     wait (l2_cache_read == 1);
+    $display("Reading from L2 cache");
     // Wait for memory to respond
     wait (l2_cache_ready == 1);
     // Wait for the cache to finish
     wait (cpu_ready == 1);
-    $display("%0t [TEST] Miss @0 -> data_out = %h (expected 001)", $time, cpu_data_out);
+    $display("%0t [TEST] Miss @001 -> data_out = %h (expected 001)", $time, cpu_data_out);
 
     // 2) HIT on the nearby address
     cpu_request(11'h000);
-    @(posedge clk);
-    @(posedge clk);
+    // @(posedge clk);
+    // @(posedge clk);
     if (cpu_ready && cpu_data_out == 8'h00)
-      $display("%0t [TEST] Hit after allocate @0 PASS", $time);
+      $display("%0t [TEST] Hit after allocate @000 PASS", $time);
     else
-      $display("%0t [TEST] Hit after allocate @0 FAIL: ready=%b, data_out=%h",
+      $display("%0t [TEST] Hit after allocate @000 FAIL: ready=%b, data_out=%h",
                 $time, cpu_ready, cpu_data_out);
     
     // 3) HIT on the nearby address
     cpu_request(11'h002);
-    @(posedge clk);
-    @(posedge clk);
     if (cpu_ready && cpu_data_out == 8'h02)
-      $display("%0t [TEST] Hit after allocate @0 PASS", $time);
+      $display("%0t [TEST] Hit after allocate @002 PASS", $time);
     else
-      $display("%0t [TEST] Hit after allocate @0 FAIL: ready=%b, data_out=%h",
+      $display("%0t [TEST] Hit after allocate @002 FAIL: ready=%b, data_out=%h",
                 $time, cpu_ready, cpu_data_out);
     // 4) HIT on the nearby address
     cpu_request(11'h005);
-    @(posedge clk);
-    @(posedge clk);
     if (cpu_ready && cpu_data_out == 8'h05)
-      $display("%0t [TEST] Hit after allocate @0 PASS", $time);
+      $display("%0t [TEST] Hit after allocate @005 PASS", $time);
     else
-      $display("%0t [TEST] Hit after allocate @0 FAIL: ready=%b, data_out=%h",
+      $display("%0t [TEST] Hit after allocate @005 FAIL: ready=%b, data_out=%h",
                 $time, cpu_ready, cpu_data_out);
 
 
@@ -183,22 +179,20 @@ module tb_l1_cache;
 
     // 2) HIT 
     cpu_request(11'h014);
-    @(posedge clk);
-    @(posedge clk);
     if (cpu_ready && cpu_data_out == 8'h14)
-      $display("%0t [TEST] Hit after allocate @0x010 PASS", $time);
+      $display("%0t [TEST] Hit after allocate @0x014 PASS", $time);
     else
-      $display("%0t [TEST] Hit after allocate @0x010 FAIL: ready=%b, data_out=%h",
+      $display("%0t [TEST] Hit after allocate @0x014 FAIL: ready=%b, data_out=%h",
                 $time, cpu_ready, cpu_data_out);
               
     // 3) HIT
     cpu_request(11'h01A);
-    @(posedge clk);
-    @(posedge clk);
+    // @(posedge clk);
+    // @(posedge clk);
     if (cpu_ready && cpu_data_out == 8'h1A)
-      $display("%0t [TEST] Hit after allocate @0x010 PASS", $time);
+      $display("%0t [TEST] Hit after allocate @0x01A PASS", $time);
     else
-      $display("%0t [TEST] Hit after allocate @0x010 FAIL: ready=%b, data_out=%h",
+      $display("%0t [TEST] Hit after allocate @0x01A FAIL: ready=%b, data_out=%h",
                 $time, cpu_ready, cpu_data_out);
 
 
@@ -210,7 +204,7 @@ module tb_l1_cache;
     // Wait for memory to respond
     wait (l2_cache_ready == 1);
     wait (cpu_ready == 1);
-    $display("%0t [TEST] Miss @0x100 -> data_out = %h (expected 01)", $time, cpu_data_out);
+    $display("%0t [TEST] Miss @0x101 -> data_out = %h (expected 01)", $time, cpu_data_out);
 
     // All done
     #50;
