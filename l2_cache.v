@@ -55,8 +55,11 @@ module L2_cache #(
     wire [INDEX_WIDTH-1:0]   index;
     wire [OFFSET_WIDTH-1:0]  offset;
 
-    assign tag    = l1_cache_addr[ADDR_WIDTH-1 -: TAG_WIDTH];
-    assign index  = l1_cache_addr[OFFSET_WIDTH + INDEX_WIDTH-1 -: INDEX_WIDTH];
+    assign index = l2_cache_addr[INDEX_WIDTH+BYTE_OFFSET_WIDTH-1:BYTE_OFFSET_WIDTH];
+    assign tag = l2_cache_addr[ADDR_WIDTH-1:INDEX_WIDTH+BYTE_OFFSET_WIDTH];
+
+    // assign tag    = l1_cache_addr[ADDR_WIDTH-1 -: TAG_WIDTH];
+    // assign index  = l1_cache_addr[OFFSET_WIDTH + INDEX_WIDTH-1 -: INDEX_WIDTH];
     assign offset = l1_cache_addr[OFFSET_WIDTH-1:0];
 
     // hit detection
