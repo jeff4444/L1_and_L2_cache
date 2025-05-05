@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 
 module tb_L2_cache;
+  initial $display("TIMESCALE OK at time %0t",$time);
   parameter DATA_WIDTH = 32;
   parameter ADDR_WIDTH = 11;
   parameter BLOCK_SIZE = 32;
