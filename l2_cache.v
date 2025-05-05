@@ -3,7 +3,8 @@ module L2_cache #(
     parameter ADDR_WIDTH  = 11,
     parameter CACHE_SIZE  = 512,
     parameter BLOCK_SIZE  = 32,
-    parameter NUM_WAYS    = 4
+    parameter NUM_WAYS    = 4,
+    parameter L1_BLOCK_SIZE = 16
 ) (
     input  wire                             clk,
     input  wire                             rst_n,
@@ -11,18 +12,20 @@ module L2_cache #(
     input  wire [ADDR_WIDTH-1:0]            l1_cache_addr,
     input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_cache_data_in,
     output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_block_data_out,
-    output reg                              l1_block_valid,
     input  wire                             l1_cache_read,
     input  wire                             l1_cache_write,
     output reg                              l1_cache_ready,
     output reg                              l1_cache_hit,
+
     // Memory interface
+    
     input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_block,
     input  wire                             mem_ready,
     output reg  [ADDR_WIDTH-1:0]            mem_addr,
     output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_out,
     output reg                             mem_read,
-    output reg                             mem_write
+    output reg                             mem_write,
+    input wire                             mem_hit
 );
 
   
@@ -31,6 +34,7 @@ module L2_cache #(
     localparam index_width  = $clog2(set_num);
     localparam offset_width = $clog2(BLOCK_SIZE);
     localparam tag_width    = ADDR_WIDTH - index_width - offset_width;
+    localparam L1_BLOCK_WIDTH = $clog2(L1_BLOCK_SIZE);
 
     // State encoding
     localparam IDLE           = 2'b00,
@@ -52,6 +56,17 @@ module L2_cache #(
     reg [$clog2(NUM_WAYS)-1:0]   hit_way;
     integer                      ii;
 
+    always @(l1_cache_addr) begin
+        if (BLOCK_SIZE > L1_BLOCK_SIZE) begin
+            start_addr = {l1_cache_addr[BYTE_OFFSET_WIDTH-1:L1_BLOCK_WIDTH], {L1_BLOCK_WIDTH{1'b0}}};
+        end else begin
+            start_addr = 0;
+        end
+    end
+
+    // assign l1_cache_hit = hit || mem_hit;
+
+
    
     always @(*) begin
         hit      = 1'b0;
@@ -63,6 +78,8 @@ module L2_cache #(
             end
         end
     end
+
+
 
     
     always @(posedge clk or negedge rst_n) begin
@@ -77,19 +94,31 @@ module L2_cache #(
         next_state = curr_state;  // default
         case (curr_state)
             IDLE: begin
-                if (l1_cache_read || l1_cache_write)
+                if (l1_cache_read || l1_cache_write)begin
                     next_state = TAG_CHECK;
+                end else begin
+                    next_state = IDLE;
+                end 
             end
 
             TAG_CHECK: begin
-                if      (hit)               next_state = IDLE;
-                else if (l1_cache_write)    next_state = IDLE;      // write‐miss allocate immediately
-                else                        next_state = WRITE_ALLOCATE;
+                if (hit) begin              
+                    next_state = IDLE;
+                end 
+                else if begin (l1_cache_write)    
+                    next_state = IDLE;      // write‐miss allocate immediately
+                end 
+                else begin                       
+                    next_state = WRITE_ALLOCATE;
+                end 
             end
 
             WRITE_ALLOCATE: begin
-                if (mem_ready)
+                if (mem_ready)begin
                     next_state = IDLE;
+                end else begin
+                    next_state = WRITE_ALLOCATE;
+                end 
             end
 
             default: next_state = IDLE;
