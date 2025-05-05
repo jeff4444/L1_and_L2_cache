@@ -44,6 +44,10 @@ module L2_cache #(
     wire [INDEX_WIDTH-1:0] index = l2_cache_addr[INDEX_WIDTH + BYTE_OFFSET_WIDTH - 1 : BYTE_OFFSET_WIDTH];
     wire [TAG_WIDTH-1:0] tag = l2_cache_addr[ADDR_WIDTH - 1 : INDEX_WIDTH + BYTE_OFFSET_WIDTH];
 
+    wire [BYTE_OFFSET_WIDTH-1:0] offset = l2_cache_addr[BYTE_OFFSET_WIDTH-1:0];
+    wire [BYTE_OFFSET_WIDTH-1:0] start_index = (offset >> $clog2(L1_BLOCK_SIZE)) << $clog2(L1_BLOCK_SIZE);
+
+
     reg hit;
     reg [$clog2(NUM_WAYS)-1:0] hit_way;
     reg [$clog2(NUM_WAYS)-1:0] alloc_way;
@@ -159,11 +163,14 @@ module L2_cache #(
                         valid[index][alloc_way] <= 1'b1;
 
                         // transfer L1 block
-                        for (i = 0; i < L1_BLOCK_SIZE; i = i + 1)
-                            if ((i < BLOCK_SIZE))
-                                l2_cache_data_out[i] <= mem_data_in[i];
-                            else
-                                l2_cache_data_out[i] <= '0;
+                        for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
+                            if ((start_index + i) < BLOCK_SIZE)begin
+                                l2_cache_data_out[i] <= mem_data_in[start_index + i];
+                            end
+                            else begin
+                                l2_cache_data_out[i] <= 0;
+                            end
+                        end
 
                         l2_cache_ready <= 1'b1;
                         mem_read <= 1'b0;
