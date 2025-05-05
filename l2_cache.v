@@ -118,6 +118,7 @@ module L2_cache #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             // clear outputs
+            curr_state      <= IDLE;
             l1_cache_ready   <= 1'b0;
             l1_block_valid   <= 1'b0;
             l1_cache_hit     <= 1'b0;
@@ -196,7 +197,6 @@ module L2_cache #(
 
                 WRITE_ALLOCATE: begin
                     // wait for memory response
-                    mem_read <= 1'b1;
                     if (mem_ready) begin
                         reg [$clog2(NUM_WAYS)-1:0] alloc_way;
                         alloc_way = have_empty ? empty_way : 0;
