@@ -125,7 +125,7 @@ module L1_cache #(
                 // $display("%0t [L1] Waiting for L2 cache data", $time);
                 cpu_ready <= 1'b0;
                 hit <= 1'b0;
-                l2_cache_read <= 1'b1;
+                l2_cache_read <= 1'b0;
                 l2_cache_write <= 1'b0;
                 l2_cache_addr <= cpu_addr;
             end

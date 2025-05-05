@@ -55,8 +55,8 @@ module L2_cache #(
     wire [TAG_WIDTH-1:0] tag;
 
     // assign index, byte_offset, and tag
-    assign index = l2_cache_addr[INDEX_WIDTH+BYTE_OFFSET_WIDTH-1:BYTE_OFFSET_WIDTH];
-    assign tag = l2_cache_addr[ADDR_WIDTH-1:INDEX_WIDTH+BYTE_OFFSET_WIDTH];
+    assign index = pending_addr[INDEX_WIDTH+BYTE_OFFSET_WIDTH-1:BYTE_OFFSET_WIDTH];
+    assign tag = pending_addr[ADDR_WIDTH-1:INDEX_WIDTH+BYTE_OFFSET_WIDTH];
 
     // cache hit detection
     reg hit;
@@ -72,9 +72,9 @@ module L2_cache #(
     reg read_pending;
     reg [ADDR_WIDTH-1:0] pending_addr;
 
-    always @(l2_cache_addr) begin
+    always @(pending_addr) begin
         if (BLOCK_SIZE > L1_BLOCK_SIZE) begin
-            start_addr = {l2_cache_addr[BYTE_OFFSET_WIDTH-1:L1_BLOCK_WIDTH], {L1_BLOCK_WIDTH{1'b0}}};
+            start_addr = {pending_addr[BYTE_OFFSET_WIDTH-1:L1_BLOCK_WIDTH], {L1_BLOCK_WIDTH{1'b0}}};
         end else begin
             start_addr = 0;
         end
@@ -169,6 +169,8 @@ module L2_cache #(
                     mem_data_out <= 0;
                     l2_cache_data_out <= 0;
                     delay_cnt <= 8;
+                    read_pending <= 1'b0;
+                    pending_addr <= {ADDR_WIDTH{1'b0}};
                 end
                 COMPARE_TAG: begin
                     if (delay_cnt > 0) begin
@@ -176,8 +178,10 @@ module L2_cache #(
                         l2_cache_ready <= 1'b0;
                         mem_read <= 1'b0;
                         mem_write <= 1'b0;
-                        read_pending <= 1'b1;
-                        pending_addr <= l2_cache_addr;
+                        if (delay_cnt == 8) begin
+                            read_pending <= l2_cache_read;
+                            pending_addr <= l2_cache_addr;
+                        end
                     end else begin
                         delay_cnt <= 0;
                         mem_read <= 1'b0;
@@ -185,12 +189,12 @@ module L2_cache #(
                         mem_addr <= {ADDR_WIDTH{1'b0}};
                         mem_data_out <= 0;
                         if (found) begin
-                            $display("%0t [L2] Cache hit: addr = 0x%h, data = 0x%h", $time, l2_cache_addr, data_found);
+                            $display("%0t [L2] Cache hit: addr = 0x%h, data = 0x%h", $time, pending_addr, data_found);
                             hit <= 1'b1;
                             l2_cache_ready <= 1'b1;
                             l2_cache_data_out <= data_found;
                         end else begin
-                            $display("%0t [L2] Cache miss: addr = 0x%h", $time, l2_cache_addr);
+                            $display("%0t [L2] Cache miss: addr = 0x%h", $time, pending_addr);
                             hit <= 1'b0;
                             l2_cache_ready <= 1'b0;
                             mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
@@ -201,7 +205,7 @@ module L2_cache #(
                 end
                 ALLOCATE: begin
                     if (mem_hit) begin
-                        $display("%0t [L2] Cache Allocate: addr = 0x%h data = 0x%h", $time, l2_cache_addr, mem_data_in);
+                        $display("%0t [L2] Cache Allocate: addr = 0x%h data = 0x%h", $time, pending_addr, mem_data_in);
                         mem_read <= 1'b0;
                         mem_write <= 1'b0;
                         mem_addr <= {ADDR_WIDTH{1'b0}};
