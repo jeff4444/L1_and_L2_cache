@@ -58,7 +58,7 @@ module memory #(
                 for (integer i = 0; i < BLOCK_SIZE; i = i + 1) begin
                     data_out[i] <= mem[{pending_addr[ADDR_WIDTH-1:BLOCK_BITS], {BLOCK_BITS{1'b0}}} + i];
                 end
-                $display("%0t [MEM] Mem hit: addr = %h, data = %h", $time, pending_addr, mem[{pending_addr[ADDR_WIDTH-1:BLOCK_BITS], {BLOCK_BITS{1'b0}}}]);
+                $display("%0t [MEM] Mem hit: addr = 0x%h, data = 0x%h", $time, pending_addr, mem[{pending_addr[ADDR_WIDTH-1:BLOCK_BITS], {BLOCK_BITS{1'b0}}}]);
                 ready        <= 1'b1;
                 hit          <= 1'b1;
                 read_pending <= 1'b0;

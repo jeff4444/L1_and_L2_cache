@@ -55,6 +55,8 @@ module tb_top;
   wire                      mem_ready;
   wire                      mem_hit;
 
+  wire [3:0] random_num;
+
   //--------------------------------------------------------------------------
   // Instantiate L1 cache
   //--------------------------------------------------------------------------
@@ -80,7 +82,8 @@ module tb_top;
     .l2_cache_read    (l1_l2_read),
     .l2_cache_write   (l1_l2_write),
     .l2_cache_ready   (l1_l2_ready),
-    .l2_cache_hit     (l1_l2_hit)
+    .l2_cache_hit     (l1_l2_hit),
+    .random_num       (random_num)
   );
 
   // Instantiate L2 cache between L1 and memory
@@ -109,7 +112,8 @@ module tb_top;
     .mem_data_in (mem_data_out),
     .mem_data_out(mem_data_in),
     .mem_ready   (mem_ready),
-    .mem_hit     (mem_hit)
+    .mem_hit     (mem_hit),
+    .random_num  (random_num)
   );
 
   // Instantiate memory model
@@ -129,6 +133,13 @@ module tb_top;
     .ready  (mem_ready)
   );
 
+  // instantiate LFSR for random address generation
+    lfsr lfsr_inst (
+        .clk(clk),
+        .rst_n(rst_n),
+        .lfsr_out(random_num)
+    );
+
   //--------------------------------------------------------------------------
   // Clock generator: 100 MHz
   //--------------------------------------------------------------------------
@@ -142,6 +153,12 @@ module tb_top;
     rst_n = 0;
     #20;
     rst_n = 1;
+  end
+
+  initial begin
+    `ifdef SEED
+        seed = `SEED;
+    `endif
   end
 
   //--------------------------------------------------------------------------
