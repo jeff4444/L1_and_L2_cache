@@ -129,6 +129,8 @@ module L2_cache #(
                 for (j = 0; j < NUM_WAYS; j = j + 1)
                     VALIDS[i][j] <= 1'b0;
         end else begin
+            // right after `else begin`
+            $display("%0t: STATE=%b, READ=%b, WRITE=%b, FOUND=%b", $time, curr_state, l1_cache_read, l1_cache_write, found);
             curr_state       <= next_state;
             // default outputs
             l1_cache_ready   <= 1'b0;
@@ -146,6 +148,7 @@ module L2_cache #(
                 end
 
                 TAG_CHECK: begin
+                $display("%0t: TAG_CHECK miss → mem_addr=%h, next_state=%b", $time, {tag,index,{OFFSET_WIDTH{1'b0}}}, next_state);
                     if (found) begin
                         // hit path
                         l1_cache_hit     <= 1'b1;
