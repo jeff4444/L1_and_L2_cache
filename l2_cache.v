@@ -65,7 +65,7 @@ module L2_cache #(
         for (i = 0; i < NUM_WAYS; i = i + 1) begin
             if (valid[index][i] && tags[index][i] == tag) begin
                 hit = 1'b1;
-                hit_way = i[$clog2(NUM_WAYS)-1:0];
+                hit_way = i;
             end
         end
     end
@@ -74,7 +74,7 @@ module L2_cache #(
         found_invalid = 1'b0;
         if (NUM_WAYS > 1) begin
             alloc_way = random_num[$clog2(NUM_WAYS)-1:0];
-        else begin
+        end else begin
             alloc_way = 0;
         end 
 
@@ -148,12 +148,12 @@ module L2_cache #(
                         for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
                             l2_cache_data_out[i] <= data[index][hit_way][i];
                         end
-                        $display("%0t [L2] HIT: Addr = %h", $time, l2_cache_addr);
+                        $display("%0t [L2] Cache hit: addr = 0x%h", $time, l2_cache_addr);
                     end else begin
                         mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
                         mem_read <= 1'b1;
                         l2_cache_ready <= 1'b0;
-                        $display("%0t [L2] MISS: Addr = %h", $time, l2_cache_addr);
+                        $display("%0t [L2] Cache miss: addr = 0x%h", $time, l2_cache_addr);
                     end
                 end
 
@@ -173,7 +173,7 @@ module L2_cache #(
 
                         l2_cache_ready <= 1'b1;
                         mem_read <= 1'b0;
-                        $display("%0t [L2] Allocate Complete: Addr = %h", $time, l2_cache_addr);
+                        $display("%0t [L2] Cache Allocate Complete: addr = 0x%h", $time, l2_cache_addr);
                     end
                 end
             endcase
