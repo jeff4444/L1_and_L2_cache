@@ -215,9 +215,15 @@ module L2_cache #(
                             tags[index][updated_way] <= tag;
                             data[index][updated_way] <= mem_data_in;
                         end else begin
-                            valid[index][random_num[$clog2(NUM_WAYS)-1:0]] <= 1'b1;
-                            tags[index][random_num[$clog2(NUM_WAYS)-1:0]] <= tag;
-                            data[index][random_num[$clog2(NUM_WAYS)-1:0]] <= mem_data_in;
+                            if (NUM_WAYS > 1) begin
+                                valid[index][random_num[$clog2(NUM_WAYS)-1:0]] <= 1'b1;
+                                tags[index][random_num[$clog2(NUM_WAYS)-1:0]] <= tag;
+                                data[index][random_num[$clog2(NUM_WAYS)-1:0]] <= mem_data_in;
+                            end else begin
+                                valid[index][0] <= 1'b1;
+                                tags[index][0] <= tag;
+                                data[index][0] <= mem_data_in;
+                            end
                         end
                         for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
                             l2_cache_data_out[i] <= mem_data_in[start_addr + i];

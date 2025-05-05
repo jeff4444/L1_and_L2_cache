@@ -155,6 +155,12 @@ module tb_top;
     rst_n = 1;
   end
 
+  initial begin
+    `ifdef SEED
+        seed = `SEED;
+    `endif
+  end
+
   //--------------------------------------------------------------------------
   // Simple task to issue a read from the CPU
   //--------------------------------------------------------------------------
@@ -233,8 +239,8 @@ module tb_top;
     $display("%0t [TEST] Reset released", $time);
 
     // randomize input addresses
-    for (integer i = 0; i < 6; i = i + 1) begin
-      cpu_addr = i << 1;
+    for (integer i = 0; i < 10000; i = i + 1) begin
+      cpu_addr = $random(seed);
       cpu_request(cpu_addr);
       @(posedge clk);
       cpu_read = 0;
