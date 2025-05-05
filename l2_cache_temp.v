@@ -4,14 +4,15 @@ module L2_cache #(
     parameter CACHE_SIZE = 1024,
     parameter BLOCK_SIZE = 16,
     parameter NUM_WAYS = 4,
+    parameter L1_BLOCK_SIZE = 16
 )(
     input wire clk,
     input wire rst_n,
     
     // CPU interface
     input wire [ADDR_WIDTH-1:0] l2_cache_addr,
-    input wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_in,
-    output reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_out,
+    input wire [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_in,
+    output reg [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_out,
     input wire l2_cache_read,
     input wire l2_cache_write,
     output reg l2_cache_ready,
@@ -31,6 +32,8 @@ module L2_cache #(
     localparam INDEX_WIDTH = $clog2(NUM_SETS);
     localparam BYTE_OFFSET_WIDTH = $clog2(BLOCK_SIZE);
     localparam TAG_WIDTH = ADDR_WIDTH - INDEX_WIDTH - BYTE_OFFSET_WIDTH;
+
+    localparam L1_BLOCK_WIDTH = $clog2(L1_BLOCK_SIZE);
 
     // cache line structure
     reg [TAG_WIDTH-1:0] tags[NUM_SETS-1:0][NUM_WAYS-1:0];
@@ -59,6 +62,15 @@ module L2_cache #(
     integer i;
     reg found;
     reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] data_found;
+    reg [BYTE_OFFSET_WIDTH-1:0] start_addr;
+
+    always @(l2_cache_addr) begin
+        if (BLOCK_SIZE > L1_BLOCK_SIZE) begin
+            start_addr = {l2_cache_addr[BYTE_OFFSET_WIDTH-1:L1_BLOCK_WIDTH], {L1_BLOCK_WIDTH{1'b0}}};
+        end else begin
+            start_addr = 0;
+        end
+    end
 
     assign l2_hit = hit || mem_hit;
 
@@ -175,13 +187,13 @@ module L2_cache #(
                             valid[index][updated_way] <= 1'b1;
                             tags[index][updated_way] <= tag;
                             data[index][updated_way] <= mem_data_in;
-                            l2_cache_ready <= 1'b1;
-                            l2_cache_data_out <= mem_data_in;
                         end else begin
                             valid[index][0] <= 1'b1;
                             tags[index][0] <= tag;
                             data[index][0] <= mem_data_in;
-                            l2_cache_data_out <= mem_data_in;
+                        end
+                        for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
+                            l2_cache_data_out[i] <= mem_data_in[start_addr + i];
                         end
                         l2_cache_ready <= 1'b1;
                     end else begin

@@ -3,7 +3,7 @@
 25 [L1] Cache miss: addr = 001
 45 [L2] Cache miss: addr = 001
 55 [MEM] Mem hit: addr = 000, data = 00
-65 [L2] Cache Allocate: addr = 001 data = 0f0e0d0c0b0a09080706050403020100
+65 [L2] Cache Allocate: addr = 001 data = 1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100
 75 [L1] Cache Allocate: addr = 001 data = 0f0e0d0c0b0a09080706050403020100
 75 [L1] Cache hit from L2: addr = 001, data = 01
 75 [TEST] CPU read @0x000
@@ -14,24 +14,24 @@
 105 [L1] Cache hit: addr = 005, data = 05
 105 [TEST] CPU read @0x010
 115 [L1] Cache miss: addr = 010
-135 [L2] Cache miss: addr = 010
-145 [MEM] Mem hit: addr = 010, data = 10
-155 [L2] Cache Allocate: addr = 010 data = 1f1e1d1c1b1a19181716151413121110
-165 [L1] Cache Allocate: addr = 010 data = 1f1e1d1c1b1a19181716151413121110
-165 [L1] Cache hit from L2: addr = 010, data = 10
-165 [TEST] CPU read @0x014
-175 [L1] Cache hit: addr = 014, data = 14
-175 [TEST] CPU read @0x01a
-185 [L1] Cache hit: addr = 01a, data = 1a
-185 [TEST] CPU read @0x101
-195 [L1] Cache miss: addr = 101
-215 [L2] Cache miss: addr = 101
-225 [MEM] Mem hit: addr = 100, data = 00
-235 [L2] Cache Allocate: addr = 101 data = 0f0e0d0c0b0a09080706050403020100
-245 [L1] Cache Allocate: addr = 101 data = 0f0e0d0c0b0a09080706050403020100
-245 [L1] Cache hit from L2: addr = 101, data = 01
-245 [TEST] CPU read @0x000
-255 [L1] Cache hit: addr = 000, data = 00
-255 [TEST] CPU read @0x010
-265 [L1] Cache hit: addr = 010, data = 10
-tb_top.v:287: $finish called at 315 (1ns)
+135 [L2] Cache hit: addr = 010, data = 1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100
+145 [L1] Cache Allocate: addr = 010 data = 0f0e0d0c0b0a09080706050403020100
+145 [L1] Cache hit from L2: addr = 010, data = 00
+145 [TEST] CPU read @0x014
+155 [L1] Cache hit: addr = 014, data = 04
+155 [TEST] CPU read @0x01a
+165 [L1] Cache hit: addr = 01a, data = 0a
+165 [TEST] CPU read @0x101
+175 [L1] Cache miss: addr = 101
+195 [L2] Cache miss: addr = 101
+205 [MEM] Mem hit: addr = 100, data = 00
+215 [L2] Cache Allocate: addr = 101 data = 1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100
+225 [L1] Cache Allocate: addr = 101 data = 0f0e0d0c0b0a09080706050403020100
+225 [L1] Cache hit from L2: addr = 101, data = 01
+225 [TEST] CPU read @0x000
+235 [L1] Cache miss: addr = 000
+235 [TEST] CPU read @0x010
+255 [L2] Cache hit: addr = 000, data = 1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100
+265 [L1] Cache Allocate: addr = 010 data = 0f0e0d0c0b0a09080706050403020100
+265 [L1] Cache hit from L2: addr = 010, data = 00
+tb_top.v:321: $finish called at 315 (1ns)

@@ -6,11 +6,20 @@ module tb_top;
   //--------------------------------------------------------------------------
   parameter ADDR_WIDTH  = 11;
   parameter DATA_WIDTH  = 8;
-  parameter CACHE_SIZE  = 256;
-  parameter BLOCK_SIZE  = 16;
-  parameter NUM_WAYS    = 4;
-  localparam NUM_BLOCKS = CACHE_SIZE / BLOCK_SIZE;
-  localparam NUM_SETS   = NUM_BLOCKS / NUM_WAYS;
+
+  // L1 cache parameters
+  parameter L1_CACHE_SIZE = 256;
+  parameter L1_BLOCK_SIZE = 16;
+  parameter L1_NUM_WAYS   = 1;
+  localparam L1_NUM_BLOCKS = L1_CACHE_SIZE / L1_BLOCK_SIZE;
+  localparam L1_NUM_SETS   = L1_NUM_BLOCKS / L1_NUM_WAYS;
+
+  // L2 cache parameters
+  parameter L2_CACHE_SIZE = 512;
+  parameter L2_BLOCK_SIZE = 32;
+  parameter L2_NUM_WAYS   = 1;
+  localparam L2_NUM_BLOCKS = L2_CACHE_SIZE / L2_BLOCK_SIZE;
+  localparam L2_NUM_SETS   = L2_NUM_BLOCKS / L2_NUM_WAYS;
 
   //--------------------------------------------------------------------------
   // Clock, reset, and DUT I/O
@@ -30,8 +39,8 @@ module tb_top;
   wire [ADDR_WIDTH-1:0]     l1_l2_addr;
   wire                      l1_l2_read;
   wire                      l1_l2_write;
-  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_l2_data_in;
-  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_l2_data_out;
+  wire [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_l2_data_in;
+  wire [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_l2_data_out;
   wire                      l1_l2_ready;
   wire                      l1_l2_hit;
 
@@ -39,8 +48,8 @@ module tb_top;
   wire [ADDR_WIDTH-1:0]     mem_addr;
   wire                      mem_read;
   wire                      mem_write;
-  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_in;
-  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_out;
+  wire [L2_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_in;
+  wire [L2_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_out;
   wire                      mem_ready;
   wire                      mem_hit;
 
@@ -50,9 +59,9 @@ module tb_top;
   L1_cache #(
     .ADDR_WIDTH (ADDR_WIDTH),
     .DATA_WIDTH (DATA_WIDTH),
-    .CACHE_SIZE (CACHE_SIZE),
-    .BLOCK_SIZE (BLOCK_SIZE),
-    .NUM_WAYS   (NUM_WAYS)
+    .CACHE_SIZE (L1_CACHE_SIZE),
+    .BLOCK_SIZE (L1_BLOCK_SIZE),
+    .NUM_WAYS   (L1_NUM_WAYS)
   ) dut (
     .clk              (clk),
     .rst_n            (rst_n),
@@ -76,9 +85,10 @@ module tb_top;
   L2_cache #(
     .ADDR_WIDTH (ADDR_WIDTH),
     .DATA_WIDTH (DATA_WIDTH),
-    .CACHE_SIZE (CACHE_SIZE),
-    .BLOCK_SIZE (BLOCK_SIZE),
-    .NUM_WAYS   (NUM_WAYS)
+    .CACHE_SIZE (L2_CACHE_SIZE),
+    .BLOCK_SIZE (L2_BLOCK_SIZE),
+    .NUM_WAYS   (L2_NUM_WAYS),
+    .L1_BLOCK_SIZE (L1_BLOCK_SIZE)
   ) l2_inst (
     .clk         (clk),
     .rst_n       (rst_n),
@@ -104,7 +114,7 @@ module tb_top;
   memory #(
     .ADDR_WIDTH (ADDR_WIDTH),
     .DATA_WIDTH (DATA_WIDTH),
-    .BLOCK_SIZE (BLOCK_SIZE)
+    .BLOCK_SIZE (L2_BLOCK_SIZE)
   ) mem_inst (
     .clk    (clk),
     .rst_n  (rst_n),
@@ -151,9 +161,9 @@ module tb_top;
       integer set_idx, way_idx;
       begin
           $display("\n==== L1 CACHE CONTENTS ====");
-          for (set_idx = 0; set_idx < NUM_SETS; set_idx = set_idx + 1) begin
+          for (set_idx = 0; set_idx < L1_NUM_SETS; set_idx = set_idx + 1) begin
               $display("Set %0d ------------------------", set_idx);
-              for (way_idx = 0; way_idx < NUM_WAYS; way_idx = way_idx + 1) begin
+              for (way_idx = 0; way_idx < L1_NUM_WAYS; way_idx = way_idx + 1) begin
                   // valid bit
                   $write("  Way %0d | valid=%b | ", way_idx, dut.valid[set_idx][way_idx]);
                   // tag (auto‑width hex)
@@ -173,9 +183,9 @@ module tb_top;
       integer set_idx, way_idx;
       begin
           $display("\n==== L2 CACHE CONTENTS ====");
-          for (set_idx = 0; set_idx < NUM_SETS; set_idx = set_idx + 1) begin
+          for (set_idx = 0; set_idx < L2_NUM_SETS; set_idx = set_idx + 1) begin
               $display("Set %0d ------------------------", set_idx);
-              for (way_idx = 0; way_idx < NUM_WAYS; way_idx = way_idx + 1) begin
+              for (way_idx = 0; way_idx < L2_NUM_WAYS; way_idx = way_idx + 1) begin
                   // valid bit
                   $write("  Way %0d | valid=%b | ", way_idx, l2_inst.valid[set_idx][way_idx]);
                   // tag (auto‑width hex)
@@ -214,29 +224,39 @@ module tb_top;
     // Test for index 0
     // -----------------------------------------------------------------
 
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
     // 1) COMPULSORY MISS @ addr = 0
     cpu_request(11'h001);
     wait (l1_l2_read == 1);
     wait (l1_l2_ready == 1);
     wait (cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
     // 2) HIT on the nearby address
     cpu_request(11'h000);
     wait(cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
     
     // 3) HIT on the nearby address
     cpu_request(11'h002);
     wait(cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
     // 4) HIT
     cpu_request(11'h005);
     wait(cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
 
     // -----------------------------------------------------------------
@@ -248,17 +268,23 @@ module tb_top;
     wait (l1_l2_read == 1);
     wait (l1_l2_ready == 1);
     wait (cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
     // 2) HIT 
     cpu_request(11'h014);
     wait (cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
               
     // 3) HIT
     cpu_request(11'h01A);
     wait(cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
 
     // ----------------------------------------------------------------
@@ -266,21 +292,29 @@ module tb_top;
     // ----------------------------------------------------------------
     cpu_request(11'h101);
     wait (l1_l2_read == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
     // Wait for memory to respond
     wait (l1_l2_ready == 1);
     wait (cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
     // Make sure index 0 was evicted
     cpu_request(11'h000);
     wait (cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
 
     // make sure index 1 was not evicted
     cpu_request(11'h010);
     wait (cpu_ready == 1);
-    // pretty_print();
+    `ifdef PRETTY_PRINT
+      pretty_print();
+    `endif
     cpu_read = 0;
     // All done
     #50;
