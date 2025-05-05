@@ -9,46 +9,21 @@ module L2_cache #(
     input  wire                             rst_n,
     // L1 Cache interface
     input  wire [ADDR_WIDTH-1:0]            l1_cache_addr,
-    // input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_cache_data_in,
-    // output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_block_data_out,
+    input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_cache_data_in,
+    output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_block_data_out,
     output reg                              l1_block_valid,
     input  wire                             l1_cache_read,
     input  wire                             l1_cache_write,
     output reg                              l1_cache_ready,
     output reg                              l1_cache_hit,
     // Memory interface
-    // input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_block,
+    input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_block,
     input  wire                             mem_ready,
     output reg  [ADDR_WIDTH-1:0]            mem_addr,
-    // output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_out,
+    output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_out,
     output reg                             mem_read,
-    output reg                             mem_write,
-
-        // flattened to one big vector each:
-    input  wire [(BLOCK_SIZE*DATA_WIDTH)-1:0] l1_cache_data_in_flat,
-    output reg  [(BLOCK_SIZE*DATA_WIDTH)-1:0] l1_block_data_out_flat,
-    input  wire [(BLOCK_SIZE*DATA_WIDTH)-1:0] mem_data_block_flat,
-    output reg  [(BLOCK_SIZE*DATA_WIDTH)-1:0] mem_data_out_flat
-
+    output reg                             mem_write
 );
-
-        // declare your existing 2D regs:
-    reg [DATA_WIDTH-1:0] l1_cache_data_in   [0:BLOCK_SIZE-1];
-    reg [DATA_WIDTH-1:0] l1_block_data_out  [0:BLOCK_SIZE-1];
-    reg [DATA_WIDTH-1:0] mem_data_block     [0:BLOCK_SIZE-1];
-    reg [DATA_WIDTH-1:0] mem_data_out       [0:BLOCK_SIZE-1];
-    genvar g;
-    generate
-      for (g = 0; g < BLOCK_SIZE; g = g + 1) begin
-        // unpack inputs on each clock (or combinationally):
-        always @(*) l1_cache_data_in[g] = l1_cache_data_in_flat[(g+1)*DATA_WIDTH-1 -: DATA_WIDTH];
-        always @(*) mem_data_block[g]     = mem_data_block_flat[(g+1)*DATA_WIDTH-1     -: DATA_WIDTH];
-        // pack outputs
-        always @(*) l1_block_data_out_flat[(g+1)*DATA_WIDTH-1 -: DATA_WIDTH] = l1_block_data_out[g];
-        always @(*) mem_data_out_flat    [(g+1)*DATA_WIDTH-1     -: DATA_WIDTH] = mem_data_out[g];
-      end
-    endgenerate
-
 
   
     localparam block_num    = CACHE_SIZE / BLOCK_SIZE;
