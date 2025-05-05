@@ -2,7 +2,7 @@ module L2_cache #(
     parameter DATA_WIDTH = 32,
     parameter ADDR_WIDTH = 32,
     parameter CACHE_SIZE = 1024,
-    parameter BLOCK_SIZE = 32,
+    parameter BLOCK_SIZE = 16,
     parameter NUM_WAYS = 4,
     parameter L1_BLOCK_SIZE = 16
 )(
