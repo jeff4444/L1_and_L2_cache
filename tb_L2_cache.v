@@ -26,6 +26,7 @@ module L2_cache_tb;
   wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0]   mem_data_out;
   wire                                    mem_read;
   wire                                    mem_write;
+  integer                                 i;
 
 
   L2_cache #(
@@ -68,7 +69,7 @@ module L2_cache_tb;
     l1_cache_addr    = 0;
     mem_ready        = 0;
     // zero out arrays
-    integer i;
+    
     for (i = 0; i < BLOCK_SIZE; i = i + 1) begin
       l1_cache_data_in[i] = {DATA_WIDTH{1'b0}};
       mem_data_block[i]   = {DATA_WIDTH{1'b0}};
