@@ -27,7 +27,6 @@ echo "Testing with SEED=$SEED and NUM_WAYS=$NUM_WAYS"
 
 if [ "$TEMP_FLAG" -eq 1 ]; then
   echo "Using temp L2"
-  DEFINES="-DTEMP $DEFINES"
   iverilog $DEFINES -g2005-sv -o run.vvp tb_random.v l1_cache.v l2_cache_temp.v memory.v lfsr.v
 else
   echo "Using permanent L2"
