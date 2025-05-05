@@ -206,7 +206,5 @@ module L2_cache #(
                 end
             endcase
         end
-    end
-
-    
+    end 
 endmodule

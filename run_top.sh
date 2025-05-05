@@ -10,5 +10,6 @@ if [ "$1" = "log" ]; then
 else
   vvp run.vvp
 fi
+rm run.vvp
 echo "Running Python script to parse data"
 python parse_data.py run.log
