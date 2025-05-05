@@ -24,7 +24,10 @@ module L1_cache #(
     output reg l2_cache_read,
     output reg l2_cache_write,
     input wire l2_cache_ready,
-    input wire l2_cache_hit
+    input wire l2_cache_hit,
+
+    // random num
+    input [3:0] random_num
 );
     localparam NUM_BLOCKS = CACHE_SIZE / BLOCK_SIZE;
     localparam NUM_SETS = NUM_BLOCKS / NUM_WAYS;
@@ -98,7 +101,7 @@ module L1_cache #(
         end else if (reading_from_l2) begin
             // $display("Reading from L2 cache: addr = %h, data = %h", l2_cache_addr, l2_cache_data_in);
             if (l2_cache_ready) begin
-                $display("%0t [L1] Cache Allocate: addr = %h data = %h", $time, cpu_addr, l2_cache_data_in);
+                $display("%0t [L1] Cache Allocate: addr = 0x%h data = 0x%h", $time, cpu_addr, l2_cache_data_in);
                 l2_cache_read <= 1'b0;
                 l2_cache_write <= 1'b0;
                 l2_cache_addr <= {ADDR_WIDTH{1'b0}};
@@ -110,11 +113,11 @@ module L1_cache #(
                 valid[index][updated_way] <= 1'b1;
 
                 if (!updated) begin
-                    tags[index][0] <= tag;
-                    data[index][0] <= l2_cache_data_in;
-                    valid[index][0] <= 1'b1;
+                    tags[index][random_num[$clog2(NUM_WAYS)-1:0]] <= tag;
+                    data[index][random_num[$clog2(NUM_WAYS)-1:0]] <= l2_cache_data_in;
+                    valid[index][random_num[$clog2(NUM_WAYS)-1:0]] <= 1'b1;
                 end
-                $display("%0t [L1] Cache hit from L2: addr = %h, data = %h", $time, cpu_addr, l2_cache_data_in[byte_offset]);
+                $display("%0t [L1] Cache hit from L2: addr = 0x%h, data = 0x%h", $time, cpu_addr, l2_cache_data_in[byte_offset]);
                 cpu_ready <= 1'b1;
                 cpu_data_out <= l2_cache_data_in[byte_offset];
                 hit <= 1'b1;
@@ -129,14 +132,14 @@ module L1_cache #(
         end else if (cpu_read) begin
             // $display("CPU read request: addr = %h", cpu_addr);
             if (found) begin
-                $display("%0t [L1] Cache hit: addr = %h, data = %h", $time, cpu_addr, data_found);
+                $display("%0t [L1] Cache hit: addr = 0x%h, data = 0x%h", $time, cpu_addr, data_found);
                 cpu_ready <= 1'b1;
                 hit <= 1'b1;
                 cpu_data_out <= data_found;
                 l2_cache_read <= 1'b0;
                 l2_cache_write <= 1'b0;
             end else begin
-                $display("%0t [L1] Cache miss: addr = %h", $time, cpu_addr);
+                $display("%0t [L1] Cache miss: addr = 0x%h", $time, cpu_addr);
                 cpu_ready <= 1'b0;
                 hit <= 1'b0;
                 l2_cache_read <= 1'b1;

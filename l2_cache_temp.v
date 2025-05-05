@@ -25,7 +25,10 @@ module L2_cache #(
     output reg mem_read,
     output reg mem_write,
     input wire mem_ready,
-    input wire mem_hit
+    input wire mem_hit,
+
+    // random num
+    input [3:0] random_num
 );
     localparam NUM_BLOCKS = CACHE_SIZE / BLOCK_SIZE;
     localparam NUM_SETS = NUM_BLOCKS / NUM_WAYS;
@@ -182,12 +185,12 @@ module L2_cache #(
                         mem_addr <= {ADDR_WIDTH{1'b0}};
                         mem_data_out <= 0;
                         if (found) begin
-                            $display("%0t [L2] Cache hit: addr = %h, data = %h", $time, l2_cache_addr, data_found);
+                            $display("%0t [L2] Cache hit: addr = 0x%h, data = 0x%h", $time, l2_cache_addr, data_found);
                             hit <= 1'b1;
                             l2_cache_ready <= 1'b1;
                             l2_cache_data_out <= data_found;
                         end else begin
-                            $display("%0t [L2] Cache miss: addr = %h", $time, l2_cache_addr);
+                            $display("%0t [L2] Cache miss: addr = 0x%h", $time, l2_cache_addr);
                             hit <= 1'b0;
                             l2_cache_ready <= 1'b0;
                             mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
@@ -198,7 +201,7 @@ module L2_cache #(
                 end
                 ALLOCATE: begin
                     if (mem_hit) begin
-                        $display("%0t [L2] Cache Allocate: addr = %h data = %h", $time, l2_cache_addr, mem_data_in);
+                        $display("%0t [L2] Cache Allocate: addr = 0x%h data = 0x%h", $time, l2_cache_addr, mem_data_in);
                         mem_read <= 1'b0;
                         mem_write <= 1'b0;
                         mem_addr <= {ADDR_WIDTH{1'b0}};
@@ -208,9 +211,9 @@ module L2_cache #(
                             tags[index][updated_way] <= tag;
                             data[index][updated_way] <= mem_data_in;
                         end else begin
-                            valid[index][0] <= 1'b1;
-                            tags[index][0] <= tag;
-                            data[index][0] <= mem_data_in;
+                            valid[index][random_num[$clog2(NUM_WAYS)-1:0]] <= 1'b1;
+                            tags[index][random_num[$clog2(NUM_WAYS)-1:0]] <= tag;
+                            data[index][random_num[$clog2(NUM_WAYS)-1:0]] <= mem_data_in;
                         end
                         for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
                             l2_cache_data_out[i] <= mem_data_in[start_addr + i];

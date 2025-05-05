@@ -25,17 +25,17 @@ def parse_log(file_path):
                 module = 'TEST'
                 keyword = 'read'
             elif rest.startswith('[L1]'):
-                addr_match = re.search(r'addr\s*=\s*([0-9A-Fa-f]+)', rest)
+                addr_match = re.search(r'addr\s*=\s*0x([0-9A-Fa-f]+)', rest)
                 module = 'L1'
                 keyword = re.search(r'Cache (hit|miss|Allocate)', rest)
                 keyword = keyword.group(1) if keyword else None
             elif rest.startswith('[L2]'):
-                addr_match = re.search(r'addr\s*=\s*([0-9A-Fa-f]+)', rest)
+                addr_match = re.search(r'addr\s*=\s*0x([0-9A-Fa-f]+)', rest)
                 module = 'L2'
                 keyword = re.search(r'Cache (hit|miss|Allocate)', rest)
                 keyword = keyword.group(1) if keyword else None
             elif rest.startswith('[MEM]'):
-                addr_match = re.search(r'addr\s*=\s*([0-9A-Fa-f]+)', rest)
+                addr_match = re.search(r'addr\s*=\s*0x([0-9A-Fa-f]+)', rest)
                 module = 'MEM'
                 keyword = re.search(r'Mem (hit|miss|Allocate)', rest)
                 keyword = keyword.group(1) if keyword else None
