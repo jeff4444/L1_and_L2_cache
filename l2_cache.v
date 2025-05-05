@@ -137,7 +137,7 @@ module L2_cache #(
                     l2_cache_ready <= 1'b0;
                     mem_read <= 1'b0;
                     mem_write <= 1'b0;
-                    delay_cnt <= 4;
+                    delay_cnt <= 10;
                 end
 
                 COMPARE_TAG: begin
