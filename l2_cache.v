@@ -9,6 +9,9 @@ module L2_cache #(
     input wire clk,
     input wire rst_n,
 
+    input wire [$clog2(NUM_WAYS)-1:0] rand_way,
+
+
     // CPU interface
     input wire [ADDR_WIDTH-1:0] l2_cache_addr,
     input wire [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_in,
@@ -71,14 +74,31 @@ module L2_cache #(
     end
 
     // Find a replacement way (invalid or use way 0)
+    // always @(*) begin
+    //     alloc_way = 0;
+    //     for (i = 0; i < NUM_WAYS; i = i + 1) begin
+    //         if (!valid[index][i]) begin
+    //             alloc_way = i[$clog2(NUM_WAYS)-1:0];
+    //         end
+    //     end
+    // end
+
+    
+   reg found_invalid;
+
     always @(*) begin
-        alloc_way = 0;
+        found_invalid = 1'b0;
+        alloc_way = rand_way; // default to random
+
         for (i = 0; i < NUM_WAYS; i = i + 1) begin
-            if (!valid[index][i]) begin
+            if (!valid[index][i] && !found_invalid) begin
                 alloc_way = i[$clog2(NUM_WAYS)-1:0];
+                found_invalid = 1'b1;
             end
         end
     end
+
+
 
     // FSM transitions
     always @(posedge clk or negedge rst_n) begin
