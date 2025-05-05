@@ -2,12 +2,10 @@
 
 module tb_L2_cache;
   initial $display("TIMESCALE OK at time %0t",$time);
-  parameter DATA_WIDTH     = 32;
-  parameter ADDR_WIDTH     = 11;
-  parameter BLOCK_SIZE     = 32;
-  parameter NUM_WAYS       = 4;
-  // match your DUT’s L1_BLOCK_SIZE
-  parameter L1_BLOCK_SIZE  = BLOCK_SIZE;
+  parameter DATA_WIDTH = 32;
+  parameter ADDR_WIDTH = 11;
+  parameter BLOCK_SIZE = 32;
+  parameter NUM_WAYS   = 4;
 
   reg                                     clk;
   reg                                     rst_n;
@@ -28,14 +26,13 @@ module tb_L2_cache;
   wire                                    mem_write;
   integer                                 i;
 
-  // instantiate the updated DUT
+  // instantiate the updated DUT (no L1_BLOCK_SIZE parameter)
   L2_cache #(
-    .DATA_WIDTH     (DATA_WIDTH),
-    .ADDR_WIDTH     (ADDR_WIDTH),
-    .CACHE_SIZE     (512),
-    .BLOCK_SIZE     (BLOCK_SIZE),
-    .NUM_WAYS       (NUM_WAYS),
-    .L1_BLOCK_SIZE  (L1_BLOCK_SIZE)
+    .DATA_WIDTH (DATA_WIDTH),
+    .ADDR_WIDTH (ADDR_WIDTH),
+    .CACHE_SIZE (512),
+    .BLOCK_SIZE (BLOCK_SIZE),
+    .NUM_WAYS   (NUM_WAYS)
   ) dut (
     .clk               (clk),
     .rst_n             (rst_n),
