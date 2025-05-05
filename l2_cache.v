@@ -1,219 +1,176 @@
 module L2_cache #(
-    parameter DATA_WIDTH  = 32,
-    parameter ADDR_WIDTH  = 11,
-    parameter CACHE_SIZE  = 512,
-    parameter BLOCK_SIZE  = 32,
-    parameter NUM_WAYS    = 4,
+    parameter DATA_WIDTH = 32,
+    parameter ADDR_WIDTH = 32,
+    parameter CACHE_SIZE = 1024,
+    parameter BLOCK_SIZE = 16,
+    parameter NUM_WAYS = 4,
     parameter L1_BLOCK_SIZE = 16
-) (
-    input  wire                             clk,
-    input  wire                             rst_n,
-    // L1 Cache interface
-    input  wire [ADDR_WIDTH-1:0]            l1_cache_addr,
-    input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_cache_data_in,
-    output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l1_block_data_out,
-    input  wire                             l1_cache_read,
-    input  wire                             l1_cache_write,
-    output reg                              l1_cache_ready,
-    output reg                              l1_cache_hit,
+)(
+    input wire clk,
+    input wire rst_n,
+
+    // CPU interface
+    input wire [ADDR_WIDTH-1:0] l2_cache_addr,
+    input wire [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_in,
+    output reg [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_out,
+    input wire l2_cache_read,
+    input wire l2_cache_write,
+    output reg l2_cache_ready,
+    output wire l2_hit,
 
     // Memory interface
-    
-    input  wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_block,
-    input  wire                             mem_ready,
-    output reg  [ADDR_WIDTH-1:0]            mem_addr,
-    output reg  [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_out,
-    output reg                             mem_read,
-    output reg                             mem_write,
-    input wire                             mem_hit
+    output reg [ADDR_WIDTH-1:0] mem_addr,
+    output reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_out,
+    input wire [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] mem_data_in,
+    output reg mem_read,
+    output reg mem_write,
+    input wire mem_ready,
+    input wire mem_hit
 );
 
-  
-    localparam block_num    = CACHE_SIZE / BLOCK_SIZE;
-    localparam set_num      = block_num    / NUM_WAYS;
-    localparam index_width  = $clog2(set_num);
-    localparam offset_width = $clog2(BLOCK_SIZE);
-    localparam tag_width    = ADDR_WIDTH - index_width - offset_width;
-    localparam L1_BLOCK_WIDTH = $clog2(L1_BLOCK_SIZE);
+    localparam NUM_BLOCKS = CACHE_SIZE / BLOCK_SIZE;
+    localparam NUM_SETS = NUM_BLOCKS / NUM_WAYS;
+    localparam INDEX_WIDTH = $clog2(NUM_SETS);
+    localparam BYTE_OFFSET_WIDTH = $clog2(BLOCK_SIZE);
+    localparam TAG_WIDTH = ADDR_WIDTH - INDEX_WIDTH - BYTE_OFFSET_WIDTH;
 
-    // State encoding
-    localparam IDLE           = 2'b00,
-               TAG_CHECK      = 2'b01,
-               WRITE_ALLOCATE = 2'b11;
+    reg [TAG_WIDTH-1:0] tags[NUM_SETS-1:0][NUM_WAYS-1:0];
+    reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] data[NUM_SETS-1:0][NUM_WAYS-1:0];
+    reg valid[NUM_SETS-1:0][NUM_WAYS-1:0];
 
-    // Registers
-    reg [1:0] curr_state, next_state;
-    reg [tag_width-1:0]                  TAGS   [set_num-1:0][NUM_WAYS-1:0];
-    reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] DATAS  [set_num-1:0][NUM_WAYS-1:0];
-    reg                                  VALIDS [set_num-1:0][NUM_WAYS-1:0];
+    reg [1:0] state, next_state;
+    localparam IDLE = 2'b00, COMPARE_TAG = 2'b01, ALLOCATE = 2'b10;
 
-    // Address breakdown
-    wire [tag_width-1:0]   tag   = l1_cache_addr[ADDR_WIDTH-1               : offset_width + index_width];
-    wire [index_width-1:0] index = l1_cache_addr[offset_width + index_width-1 : offset_width];
+    wire [INDEX_WIDTH-1:0] index = l2_cache_addr[INDEX_WIDTH + BYTE_OFFSET_WIDTH - 1 : BYTE_OFFSET_WIDTH];
+    wire [TAG_WIDTH-1:0] tag = l2_cache_addr[ADDR_WIDTH - 1 : INDEX_WIDTH + BYTE_OFFSET_WIDTH];
 
-    // Hit detection helpers
-    reg                          hit;
-    reg [$clog2(NUM_WAYS)-1:0]   hit_way;
-    integer                      ii;
+    reg hit;
+    reg [$clog2(NUM_WAYS)-1:0] hit_way;
+    reg [$clog2(NUM_WAYS)-1:0] alloc_way;
 
-    always @(l1_cache_addr) begin
-        if (BLOCK_SIZE > L1_BLOCK_SIZE) begin
-            start_addr = {l1_cache_addr[BYTE_OFFSET_WIDTH-1:L1_BLOCK_WIDTH], {L1_BLOCK_WIDTH{1'b0}}};
-        end else begin
-            start_addr = 0;
-        end
-    end
+    reg [3:0] delay_cnt;
+    reg [BYTE_OFFSET_WIDTH-1:0] start_addr;
+    integer i, j;
 
-    // assign l1_cache_hit = hit || mem_hit;
+    assign l2_hit = hit || mem_hit;
 
-
-   
+    // Determine hit
     always @(*) begin
-        hit      = 1'b0;
-        hit_way  = { $clog2(NUM_WAYS){1'b0} };
-        for (ii = 0; ii < NUM_WAYS; ii = ii + 1) begin
-            if (VALIDS[index][ii] && TAGS[index][ii] == tag) begin
-                hit     = 1'b1;
-                hit_way = ii[$clog2(NUM_WAYS)-1:0];
+        hit = 1'b0;
+        hit_way = 0;
+        for (i = 0; i < NUM_WAYS; i = i + 1) begin
+            if (valid[index][i] && tags[index][i] == tag) begin
+                hit = 1'b1;
+                hit_way = i[$clog2(NUM_WAYS)-1:0];
             end
         end
     end
 
+    // Find a replacement way (invalid or use way 0)
+    always @(*) begin
+        alloc_way = 0;
+        for (i = 0; i < NUM_WAYS; i = i + 1) begin
+            if (!valid[index][i]) begin
+                alloc_way = i[$clog2(NUM_WAYS)-1:0];
+            end
+        end
+    end
 
-
-    
+    // FSM transitions
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
-            curr_state <= IDLE;
+            state <= IDLE;
         else
-            curr_state <= next_state;
+            state <= next_state;
     end
 
-    
     always @(*) begin
-        next_state = curr_state;  // default
-        case (curr_state)
-            IDLE: begin
-                if (l1_cache_read || l1_cache_write)begin
-                    next_state = TAG_CHECK;
-                end else begin
+        case (state)
+            IDLE:
+                if (l2_cache_read || l2_cache_write)
+                    next_state = COMPARE_TAG;
+                else
                     next_state = IDLE;
-                end 
-            end
 
-            TAG_CHECK: begin
-                if (hit) begin              
+            COMPARE_TAG:
+                if (delay_cnt > 0)
+                    next_state = COMPARE_TAG;
+                else if (hit)
                     next_state = IDLE;
-                end 
-                else if(l1_cache_write)  begin    
-                    next_state = IDLE;      // write‐miss allocate immediately
-                end 
-                else begin                       
-                    next_state = WRITE_ALLOCATE;
-                end 
-            end
+                else
+                    next_state = ALLOCATE;
 
-            WRITE_ALLOCATE: begin
-                if (mem_ready)begin
+            ALLOCATE:
+                if (mem_ready || mem_hit)
                     next_state = IDLE;
-                end else begin
-                    next_state = WRITE_ALLOCATE;
-                end 
-            end
+                else
+                    next_state = ALLOCATE;
 
             default: next_state = IDLE;
         endcase
     end
 
-   
+    // FSM outputs and behavior
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            // --- reset all outputs & invalidate lines ---
-            l1_cache_ready    <= 1'b0;
-            l1_cache_hit      <= 1'b0;
-            l1_block_valid    <= 1'b0;
-            mem_read          <= 1'b0;
-            mem_write         <= 1'b0;
-            mem_data_out      <= {(BLOCK_SIZE*DATA_WIDTH){1'b0}};
-            mem_addr          <= {ADDR_WIDTH{1'b0}};
-            l1_block_data_out <= {(BLOCK_SIZE*DATA_WIDTH){1'b0}};
-            for (ii = 0; ii < set_num; ii = ii + 1)
-                for (integer w = 0; w < NUM_WAYS; w = w + 1)
-                    VALIDS[ii][w] <= 1'b0;
-        end
-        else begin
-            // --- default de‐assert on every cycle ---
-            l1_cache_ready <= 1'b0;
-            l1_cache_hit   <= 1'b0;
-            l1_block_valid <= 1'b0;
-            mem_read       <= 1'b0;
-            mem_write      <= 1'b0;
-
-            case (curr_state)
+            l2_cache_ready <= 1'b0;
+            mem_read <= 1'b0;
+            mem_write <= 1'b0;
+            hit <= 1'b0;
+            mem_addr <= 0;
+            mem_data_out <= 0;
+            l2_cache_data_out <= 0;
+            delay_cnt <= 0;
+            for (i = 0; i < NUM_SETS; i = i + 1)
+                for (j = 0; j < NUM_WAYS; j = j + 1)
+                    valid[i][j] <= 1'b0;
+        end else begin
+            case (state)
                 IDLE: begin
-                    // nothing to do
+                    l2_cache_ready <= 1'b0;
+                    mem_read <= 1'b0;
+                    mem_write <= 1'b0;
+                    delay_cnt <= 4;  // adjustable latency
                 end
 
-                TAG_CHECK: begin
-                    if (hit) begin
-                        // --- HIT path ---
-                        l1_cache_hit     <= 1'b1;
-                        VALIDS[index][hit_way] <= 1'b1;
-                        if (l1_cache_read) begin
-                            l1_block_data_out <= DATAS[index][hit_way];
-                        end else begin
-                            // write-through
-                            DATAS[index][hit_way] <= l1_cache_data_in;
-                            mem_addr              <= {tag, index, {offset_width{1'b0}}};
-                            mem_data_out          <= l1_cache_data_in;
-                            mem_write             <= 1'b1;
-                            l1_block_data_out     <= l1_cache_data_in;
+                COMPARE_TAG: begin
+                    if (delay_cnt > 0)
+                        delay_cnt <= delay_cnt - 1;
+                    else if (hit) begin
+                        l2_cache_ready <= 1'b1;
+                        for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
+                            l2_cache_data_out[i] <= data[index][hit_way][i];
                         end
-                        l1_block_valid <= 1'b1;
-                        l1_cache_ready <= 1'b1;
-
+                        $display("%0t [L2] HIT: Addr = %h", $time, l2_cache_addr);
                     end else begin
-                        // --- MISS path ---
-                        // pick first invalid way or default 0
-                        reg [$clog2(NUM_WAYS)-1:0] alloc_way;
-                        alloc_way = { $clog2(NUM_WAYS){1'b0} };
-                        for (ii = 0; ii < NUM_WAYS; ii = ii + 1)
-                            if (!VALIDS[index][ii])
-                                alloc_way = ii[$clog2(NUM_WAYS)-1:0];
-
-                        if (l1_cache_write) begin
-                            // write-miss: write allocate
-                            TAGS[index][alloc_way]   <= tag;
-                            VALIDS[index][alloc_way] <= 1'b1;
-                            DATAS[index][alloc_way]  <= l1_cache_data_in;
-                            mem_addr                 <= {tag, index, {offset_width{1'b0}}};
-                            mem_data_out             <= l1_cache_data_in;
-                            mem_write                <= 1'b1;
-                            l1_block_data_out        <= l1_cache_data_in;
-                            l1_block_valid           <= 1'b1;
-                            l1_cache_ready           <= 1'b1;
-                        end else begin
-                            // read-miss: fetch from memory
-                            mem_addr  <= {tag, index, {offset_width{1'b0}}};
-                            mem_read  <= 1'b1;
-                        end
+                        mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
+                        mem_read <= 1'b1;
+                        l2_cache_ready <= 1'b0;
+                        $display("%0t [L2] MISS: Addr = %h", $time, l2_cache_addr);
                     end
                 end
 
-                WRITE_ALLOCATE: begin
-                    // wait until mem_ready, then install block
-                    mem_read <= 1'b1;
-                    if (mem_ready) begin
-                        DATAS[index][hit_way]   <= mem_data_block;
-                        TAGS[index][hit_way]    <= tag;
-                        VALIDS[index][hit_way]  <= 1'b1;
-                        l1_block_data_out       <= mem_data_block;
-                        l1_block_valid          <= 1'b1;
-                        l1_cache_ready          <= 1'b1;
+                ALLOCATE: begin
+                    if (mem_ready || mem_hit) begin
+                        // install block
+                        for (i = 0; i < BLOCK_SIZE; i = i + 1)
+                            data[index][alloc_way][i] <= mem_data_in[i];
+                        tags[index][alloc_way] <= tag;
+                        valid[index][alloc_way] <= 1'b1;
+
+                        // transfer L1 block
+                        for (i = 0; i < L1_BLOCK_SIZE; i = i + 1)
+                            if ((i < BLOCK_SIZE))
+                                l2_cache_data_out[i] <= mem_data_in[i];
+                            else
+                                l2_cache_data_out[i] <= '0;
+
+                        l2_cache_ready <= 1'b1;
+                        mem_read <= 1'b0;
+                        $display("%0t [L2] Allocate Complete: Addr = %h", $time, l2_cache_addr);
                     end
                 end
             endcase
         end
     end
-
 endmodule
