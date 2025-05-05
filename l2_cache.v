@@ -1,11 +1,11 @@
 `timescale 1ns/1ps
 
 module L2_cache #(
-    parameter DATA_WIDTH = 32,
-    parameter ADDR_WIDTH = 11,
-    parameter CACHE_SIZE = 512,
-    parameter BLOCK_SIZE = 32,
-    parameter NUM_WAYS   = 4
+    parameter DATA_WIDTH   = 32,
+    parameter ADDR_WIDTH   = 11,
+    parameter CACHE_SIZE   = 512,
+    parameter BLOCK_SIZE   = 32,
+    parameter NUM_WAYS     = 4
 ) (
     input  wire                          clk,
     input  wire                          rst_n,
@@ -49,6 +49,9 @@ module L2_cache #(
     // FSM registers
     reg [1:0] curr_state, next_state;
 
+    // loop indices
+    integer i, j;
+
     // helper signals
     wire [TAG_WIDTH-1:0]     tag;
     wire [INDEX_WIDTH-1:0]   index;
@@ -61,7 +64,6 @@ module L2_cache #(
     // hit detection
     reg                                     found;
     reg [$clog2(NUM_WAYS)-1:0]             found_way;
-    integer                                i;
     always @(*) begin
         found = 1'b0;
         found_way = 0;
@@ -123,10 +125,9 @@ module L2_cache #(
             l1_block_data_out<= {(BLOCK_SIZE*DATA_WIDTH){1'b0}};
             // invalidate lines
             for (i = 0; i < SET_COUNT; i = i + 1)
-                for (found_way = 0; found_way < NUM_WAYS; found_way = found_way + 1)
-                    VALIDS[i][found_way] <= 1'b0;
+                for (j = 0; j < NUM_WAYS; j = j + 1)
+                    VALIDS[i][j] <= 1'b0;
         end else begin
-            // update state
             curr_state       <= next_state;
             // default outputs
             l1_cache_ready   <= 1'b0;
@@ -140,7 +141,7 @@ module L2_cache #(
 
             case (curr_state)
                 IDLE: begin
-                    // nothing
+                    // no action
                 end
 
                 TAG_CHECK: begin
@@ -162,22 +163,22 @@ module L2_cache #(
                         l1_block_valid           <= 1'b1;
                     end else begin
                         // miss path
+                        reg [$clog2(NUM_WAYS)-1:0] alloc_way;
+                        alloc_way = have_empty ? empty_way : 0;
+
                         if (l1_cache_write) begin
-                            // write miss allocate
-                            idx: ; // label to avoid mixed decl
-                            reg integer w;
-                            integer alloc = have_empty ? empty_way : 0;
-                            TAGS[index][alloc]     <= tag;
-                            VALIDS[index][alloc]   <= 1'b1;
-                            DATAS[index][alloc]    <= l1_cache_data_in;
-                            mem_data_out           <= l1_cache_data_in;
-                            mem_addr               <= {tag, index, {OFFSET_WIDTH{1'b0}}};
-                            mem_write              <= 1'b1;
-                            l1_block_data_out      <= l1_cache_data_in;
-                            l1_block_valid         <= 1'b1;
-                            l1_cache_ready         <= 1'b1;
+                            // write-miss allocate
+                            TAGS[index][alloc_way]   <= tag;
+                            VALIDS[index][alloc_way] <= 1'b1;
+                            DATAS[index][alloc_way]  <= l1_cache_data_in;
+                            mem_data_out             <= l1_cache_data_in;
+                            mem_addr                 <= {tag, index, {OFFSET_WIDTH{1'b0}}};
+                            mem_write                <= 1'b1;
+                            l1_block_data_out        <= l1_cache_data_in;
+                            l1_block_valid           <= 1'b1;
+                            l1_cache_ready           <= 1'b1;
                         end else begin
-                            // read miss
+                            // read-miss
                             mem_addr <= {tag, index, {OFFSET_WIDTH{1'b0}}};
                             mem_read <= 1'b1;
                         end
@@ -185,17 +186,18 @@ module L2_cache #(
                 end
 
                 WRITE_ALLOCATE: begin
-                    // stay in this state until mem_ready
+                    // wait for memory response
                     mem_read <= 1'b1;
                     if (mem_ready) begin
-                        integer alloc = have_empty ? empty_way : 0;
+                        reg [$clog2(NUM_WAYS)-1:0] alloc_way;
+                        alloc_way = have_empty ? empty_way : 0;
                         // fill from memory
-                        TAGS[index][alloc]     <= tag;
-                        VALIDS[index][alloc]   <= 1'b1;
-                        DATAS[index][alloc]    <= mem_data_block;
-                        l1_block_data_out      <= mem_data_block;
-                        l1_block_valid         <= 1'b1;
-                        l1_cache_ready         <= 1'b1;
+                        TAGS[index][alloc_way]   <= tag;
+                        VALIDS[index][alloc_way] <= 1'b1;
+                        DATAS[index][alloc_way]  <= mem_data_block;
+                        l1_block_data_out        <= mem_data_block;
+                        l1_block_valid           <= 1'b1;
+                        l1_cache_ready           <= 1'b1;
                     end
                 end
 
@@ -204,3 +206,4 @@ module L2_cache #(
     end
 
 endmodule
+
