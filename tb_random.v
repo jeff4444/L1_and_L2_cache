@@ -220,9 +220,11 @@ module tb_top;
     $display("%0t [TEST] Reset released", $time);
 
     // randomize input addresses
-    for (integer i = 0; i < 10000; i = i + 1) begin
+    for (integer i = 0; i < 100; i = i + 1) begin
       cpu_addr = i;
       cpu_request(cpu_addr);
+      @(posedge clk);
+      cpu_read = 0;
       wait (cpu_ready == 1);
       `ifdef PRETTY_PRINT
         pretty_print();

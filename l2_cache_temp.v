@@ -64,6 +64,11 @@ module L2_cache #(
     reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] data_found;
     reg [BYTE_OFFSET_WIDTH-1:0] start_addr;
 
+    // Delay logic for reads
+    reg [3:0] delay_cnt;
+    reg read_pending;
+    reg [ADDR_WIDTH-1:0] pending_addr;
+
     always @(l2_cache_addr) begin
         if (BLOCK_SIZE > L1_BLOCK_SIZE) begin
             start_addr = {l2_cache_addr[BYTE_OFFSET_WIDTH-1:L1_BLOCK_WIDTH], {L1_BLOCK_WIDTH{1'b0}}};
@@ -115,10 +120,14 @@ module L2_cache #(
                 end
             end
             COMPARE_TAG: begin
-                if (found) begin
-                    next_state = IDLE;
+                if (delay_cnt > 0) begin
+                    next_state = COMPARE_TAG;
                 end else begin
-                    next_state = ALLOCATE;
+                    if (found) begin
+                        next_state = IDLE;
+                    end else begin
+                        next_state = ALLOCATE;
+                    end
                 end
             end
             ALLOCATE: begin
@@ -156,24 +165,35 @@ module L2_cache #(
                     mem_addr <= {ADDR_WIDTH{1'b0}};
                     mem_data_out <= 0;
                     l2_cache_data_out <= 0;
+                    delay_cnt <= 8;
                 end
                 COMPARE_TAG: begin
-                    mem_read <= 1'b0;
-                    mem_write <= 1'b0;
-                    mem_addr <= {ADDR_WIDTH{1'b0}};
-                    mem_data_out <= 0;
-                    if (found) begin
-                        $display("%0t [L2] Cache hit: addr = %h, data = %h", $time, l2_cache_addr, data_found);
-                        hit <= 1'b1;
-                        l2_cache_ready <= 1'b1;
-                        l2_cache_data_out <= data_found;
+                    if (delay_cnt > 0) begin
+                        delay_cnt <= delay_cnt - 1;
+                        l2_cache_ready <= 1'b0;
+                        mem_read <= 1'b0;
+                        mem_write <= 1'b0;
+                        read_pending <= 1'b1;
+                        pending_addr <= l2_cache_addr;
                     end else begin
-                        $display("%0t [L2] Cache miss: addr = %h", $time, l2_cache_addr);
-                        hit <= 1'b0;
-                        l2_cache_ready <= 1'b0;
-                        mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
-                        mem_read <= 1'b1;
-                        l2_cache_ready <= 1'b0;
+                        delay_cnt <= 0;
+                        mem_read <= 1'b0;
+                        mem_write <= 1'b0;
+                        mem_addr <= {ADDR_WIDTH{1'b0}};
+                        mem_data_out <= 0;
+                        if (found) begin
+                            $display("%0t [L2] Cache hit: addr = %h, data = %h", $time, l2_cache_addr, data_found);
+                            hit <= 1'b1;
+                            l2_cache_ready <= 1'b1;
+                            l2_cache_data_out <= data_found;
+                        end else begin
+                            $display("%0t [L2] Cache miss: addr = %h", $time, l2_cache_addr);
+                            hit <= 1'b0;
+                            l2_cache_ready <= 1'b0;
+                            mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
+                            mem_read <= 1'b1;
+                            l2_cache_ready <= 1'b0;
+                        end
                     end
                 end
                 ALLOCATE: begin
@@ -197,9 +217,9 @@ module L2_cache #(
                         end
                         l2_cache_ready <= 1'b1;
                     end else begin
-                        mem_read <= l2_cache_read;
+                        mem_read <= read_pending;
                         mem_write <= l2_cache_write;
-                        mem_addr <= l2_cache_addr;
+                        mem_addr <= pending_addr;
                         mem_data_out <= l2_cache_data_in;
                         l2_cache_ready <= 1'b0;
                     end
