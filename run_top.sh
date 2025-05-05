@@ -2,21 +2,28 @@
 SEED=$RANDOM
 PRETTY_PRINT_FLAG=0
 TEMP_FLAG=0
-while getopts "pts:" opt; do
+NUM_WAYS=4 
+
+usage="Usage: $0 [-p] [-t] [-s seed] [-n num_ways] [no-log]"
+
+while getopts "pts:n:" opt; do
   case "$opt" in
     p) PRETTY_PRINT_FLAG=1 ;;
     t) TEMP_FLAG=1 ;;
     s) SEED="$OPTARG" ;;
-    *) echo "Usage: $0 [-p] [-t] [-s seed] [no-log]"; exit 1 ;;
+    n) NUM_WAYS="$OPTARG" ;;
+    *) echo "$usage"; exit 1 ;;
   esac
 done
 shift $((OPTIND -1))
 
 
-DEFINES="-DSEED=$SEED"
+DEFINES="-DSEED=$SEED -DNUM_WAYS=$NUM_WAYS"
 if [ "$PRETTY_PRINT_FLAG" -eq 1 ]; then
   DEFINES="$DEFINES -DPRETTY_PRINT"
 fi
+
+echo "Testing with SEED=$SEED and NUM_WAYS=$NUM_WAYS"
 
 if [ "$TEMP_FLAG" -eq 1 ]; then
   echo "Using temp L2"
@@ -39,4 +46,8 @@ else
 fi
 
 rm run.vvp
-python parse_data.py run.log
+if [ "$TEMP_FLAG" -eq 1 ]; then
+  python parse_data.py run2.log
+else
+  python parse_data.py run.log
+fi

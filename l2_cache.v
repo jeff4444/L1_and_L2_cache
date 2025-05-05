@@ -65,7 +65,7 @@ module L2_cache #(
         for (i = 0; i < NUM_WAYS; i = i + 1) begin
             if (valid[index][i] && tags[index][i] == tag) begin
                 hit = 1'b1;
-                hit_way = i[$clog2(NUM_WAYS)-1:0];
+                hit_way = i;
             end
         end
     end
@@ -75,7 +75,7 @@ module L2_cache #(
         alloc_way = 0;
         for (i = 0; i < NUM_WAYS; i = i + 1) begin
             if (!valid[index][i]) begin
-                alloc_way = i[$clog2(NUM_WAYS)-1:0];
+                alloc_way = i;
             end
         end
     end
@@ -157,8 +157,7 @@ module L2_cache #(
                 ALLOCATE: begin
                     if (mem_ready || mem_hit) begin
                         // install block
-                        for (i = 0; i < BLOCK_SIZE; i = i + 1)
-                            data[index][alloc_way][i] <= mem_data_in[i];
+                        data[index][alloc_way] <= mem_data_in;
                         tags[index][alloc_way] <= tag;
                         valid[index][alloc_way] <= 1'b1;
 

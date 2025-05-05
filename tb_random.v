@@ -10,14 +10,22 @@ module tb_top;
   // L1 cache parameters
   parameter L1_CACHE_SIZE = 256;
   parameter L1_BLOCK_SIZE = 16;
-  parameter L1_NUM_WAYS   = 8;
+  `ifdef NUM_WAYS
+    parameter L1_NUM_WAYS   = `NUM_WAYS;
+  `else
+    parameter L1_NUM_WAYS   = 4;
+  `endif
   localparam L1_NUM_BLOCKS = L1_CACHE_SIZE / L1_BLOCK_SIZE;
   localparam L1_NUM_SETS   = L1_NUM_BLOCKS / L1_NUM_WAYS;
 
   // L2 cache parameters
   parameter L2_CACHE_SIZE = 512;
   parameter L2_BLOCK_SIZE = 32;
-  parameter L2_NUM_WAYS   = 8;
+  `ifdef NUM_WAYS
+    parameter L2_NUM_WAYS   = `NUM_WAYS;
+  `else
+    parameter L2_NUM_WAYS   = 4;
+  `endif
   localparam L2_NUM_BLOCKS = L2_CACHE_SIZE / L2_BLOCK_SIZE;
   localparam L2_NUM_SETS   = L2_NUM_BLOCKS / L2_NUM_WAYS;
 
