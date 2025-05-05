@@ -140,7 +140,7 @@ module L2_cache #(
                     end else begin
                         tags[index][0]         = tag;
                         data_mem[index][0]     = mem_data_block;
-                        valid[index][0]        = mem_data_block;
+                        valid[index][0]        = 1'b1;
                     end
                     // drive L1 outputs
                     l1_block_data_out = mem_data_block;
