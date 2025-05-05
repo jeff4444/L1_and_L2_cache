@@ -1,5 +1,5 @@
 $date
-	Sun May  4 00:15:47 2025
+	Sun May  4 00:49:46 2025
 $end
 $version
 	Icarus Verilog
@@ -84,10 +84,10 @@ $var parameter 43 W MEM_SIZE $end
 $var reg 128 X data_out [127:0] $end
 $var reg 1 $ hit $end
 $var reg 1 " ready $end
-$scope begin $ivl_for_loop1 $end
+$scope begin $ivl_for_loop2 $end
 $var integer 32 Y i [31:0] $end
 $upscope $end
-$scope begin $ivl_for_loop2 $end
+$scope begin $ivl_for_loop3 $end
 $var integer 32 Z i [31:0] $end
 $upscope $end
 $upscope $end

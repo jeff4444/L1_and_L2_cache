@@ -54,6 +54,7 @@ module L1_cache #(
     reg found;
     reg [DATA_WIDTH-1:0] data_found;
     reg reading_from_l2;
+    reg [$clog2(NUM_WAYS) - 1:0] updated_way;
 
     assign l1_hit = hit;
 
@@ -73,15 +74,16 @@ module L1_cache #(
     always @(*) begin
         updated = 1'b0;
         for (i = 0; i < NUM_WAYS; i = i + 1) begin
-            if (!valid[index][i]) begin
+            if (!valid[index][i] && !updated) begin
                 updated = 1'b1;
+                updated_way = i;
             end
         end
     end
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            cpu_ready <= 1'b1;
+            cpu_ready <= 1'b0;
             l2_cache_read <= 1'b0;
             l2_cache_write <= 1'b0;
             l2_cache_addr <= 0;
@@ -92,40 +94,48 @@ module L1_cache #(
                 end
             end 
             reading_from_l2 <= 1'b0;
+            // $display("L1 Cache reset");
         end else if (reading_from_l2) begin
+            // $display("Reading from L2 cache: addr = %h, data = %h", l2_cache_addr, l2_cache_data_in);
             if (l2_cache_ready) begin
+                $display("%0t [L1] Cache Allocate: addr = %h data = %h", $time, cpu_addr, l2_cache_data_in);
                 l2_cache_read <= 1'b0;
                 l2_cache_write <= 1'b0;
                 l2_cache_addr <= {ADDR_WIDTH{1'b0}};
                 l2_cache_data_out <= l2_cache_data_in;
                 reading_from_l2 <= 1'b0;
 
-                // Write data to L1 cache
-                for (i = 0; i < NUM_WAYS; i = i + 1) begin
-                    if (!valid[index][i]) begin
-                        tags[index][i] <= tag;
-                        data[index][i] <= l2_cache_data_in;
-                        valid[index][i] <= 1'b1;
-                    end
-                end
+                tags[index][updated_way] <= tag;
+                data[index][updated_way] <= l2_cache_data_in;
+                valid[index][updated_way] <= 1'b1;
 
                 if (!updated) begin
                     tags[index][0] <= tag;
                     data[index][0] <= l2_cache_data_in;
                     valid[index][0] <= 1'b1;
                 end
+                $display("%0t [L1] Cache hit from L2: addr = %h, data = %h", $time, cpu_addr, l2_cache_data_in[byte_offset]);
                 cpu_ready <= 1'b1;
                 cpu_data_out <= l2_cache_data_in[byte_offset];
                 hit <= 1'b1;
+            end else begin
+                // $display("%0t [L1] Waiting for L2 cache data", $time);
+                cpu_ready <= 1'b0;
+                hit <= 1'b0;
+                l2_cache_read <= 1'b0;
+                l2_cache_write <= 1'b0;
             end
         end else if (cpu_read) begin
+            // $display("CPU read request: addr = %h", cpu_addr);
             if (found) begin
+                $display("%0t [L1] Cache hit: addr = %h, data = %h", $time, cpu_addr, data_found);
                 cpu_ready <= 1'b1;
                 hit <= 1'b1;
                 cpu_data_out <= data_found;
                 l2_cache_read <= 1'b0;
                 l2_cache_write <= 1'b0;
             end else begin
+                $display("%0t [L1] Cache miss: addr = %h", $time, cpu_addr);
                 cpu_ready <= 1'b0;
                 hit <= 1'b0;
                 l2_cache_read <= 1'b1;
@@ -133,12 +143,6 @@ module L1_cache #(
                 l2_cache_addr <= cpu_addr;
                 reading_from_l2 <= 1'b1;
             end
-        end else begin
-            $display("CPU write request: addr = %h, data = %h", cpu_addr, cpu_data_in);
         end
-    end
-
-    
-
-    
+    end    
 endmodule
