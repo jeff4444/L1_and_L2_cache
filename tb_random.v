@@ -219,114 +219,19 @@ module tb_top;
     @(posedge rst_n);
     $display("%0t [TEST] Reset released", $time);
 
+    // randomize input addresses
+    for (integer i = 0; i < 10000; i = i + 1) begin
+      cpu_addr = $urandom;
+      cpu_request(cpu_addr);
+      wait (cpu_ready == 1);
+      `ifdef PRETTY_PRINT
+        pretty_print();
+        `endif
+    end
 
-    // -----------------------------------------------------------------
-    // Test for index 0
-    // -----------------------------------------------------------------
-
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-    // 1) COMPULSORY MISS @ addr = 0
-    cpu_request(11'h001);
-    wait (l1_l2_read == 1);
-    wait (l1_l2_ready == 1);
-    wait (cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-    // 2) HIT on the nearby address
-    cpu_request(11'h000);
-    wait(cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-    
-    // 3) HIT on the nearby address
-    cpu_request(11'h002);
-    wait(cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-    // 4) HIT
-    cpu_request(11'h005);
-    wait(cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-
-    // -----------------------------------------------------------------
-    // Test for index 1
-    // -----------------------------------------------------------------
-
-    // 1) COMPULSORY MISS
-    cpu_request(11'h010);
-    wait (l1_l2_read == 1);
-    wait (l1_l2_ready == 1);
-    wait (cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-    // 2) HIT 
-    cpu_request(11'h014);
-    wait (cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-              
-    // 3) HIT
-    cpu_request(11'h01A);
-    wait(cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-
-    // ----------------------------------------------------------------
-    // Test for eviction of index 0
-    // ----------------------------------------------------------------
-    cpu_request(11'h101);
-    wait (l1_l2_read == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-    // Wait for memory to respond
-    wait (l1_l2_ready == 1);
-    wait (cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-    // Make sure index 0 was evicted
-    cpu_request(11'h000);
-    wait (cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
-
-    // make sure index 1 was not evicted
-    cpu_request(11'h010);
-    wait (cpu_ready == 1);
-    `ifdef PRETTY_PRINT
-      pretty_print();
-    `endif
     cpu_read = 0;
     // All done
     #50;
     $finish;
   end
-
-  //--------------------------------------------------------------------------
-  // dump signals
-  //--------------------------------------------------------------------------
-  // initial begin
-  //   $dumpfile("tb_top.vcd");
-  //   $dumpvars(0, tb_top);
-  // end
-
 endmodule
