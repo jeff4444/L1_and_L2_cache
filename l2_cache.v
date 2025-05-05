@@ -105,7 +105,7 @@ module L2_cache #(
                 if (hit) begin              
                     next_state = IDLE;
                 end 
-                else if begin (l1_cache_write)    
+                else if(l1_cache_write)  begin    
                     next_state = IDLE;      // write‐miss allocate immediately
                 end 
                 else begin                       
