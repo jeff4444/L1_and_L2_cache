@@ -53,6 +53,8 @@ module L2_cache_tb;
     .mem_read          (mem_read),
     .mem_write         (mem_write)
   );
+  initial $display(">>> SIM STARTED at %0t <<<", $time);
+
 
  
   initial begin
