@@ -1,3 +1,4 @@
+```verilog
 module L2_cache #(
     parameter DATA_WIDTH     = 32,
     parameter ADDR_WIDTH     = 32,
@@ -35,9 +36,9 @@ module L2_cache #(
     localparam TAG_WIDTH    = ADDR_WIDTH - INDEX_WIDTH - OFFSET_WIDTH;
 
     // storage arrays
-    reg [TAG_WIDTH-1:0]                          tags  [0:NUM_SETS-1][0:NUM_WAYS-1];
-    reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0]         data_mem [0:NUM_SETS-1][0:NUM_WAYS-1];
-    reg                                          valid [0:NUM_SETS-1][0:NUM_WAYS-1];
+    reg [TAG_WIDTH-1:0]                          tags      [0:NUM_SETS-1][0:NUM_WAYS-1];
+    reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0]         data_mem  [0:NUM_SETS-1][0:NUM_WAYS-1];
+    reg                                          valid     [0:NUM_SETS-1][0:NUM_WAYS-1];
 
     // FSM states
     reg [1:0] curr_state, next_state;
@@ -120,7 +121,7 @@ module L2_cache #(
                 end else begin
                     // miss: send request
                     mem_addr   = {tag, index, {OFFSET_WIDTH{1'b0}}};
-                    mem_read   = l1_cache_read;
+                    mem_read   = 1'b1;
                     mem_write  = l1_cache_write;
                     next_state = ALLOCATE;
                 end
@@ -128,7 +129,7 @@ module L2_cache #(
 
             ALLOCATE: begin
                 if (!mem_ready) begin
-                    // still waiting
+                    // hold request until ready
                     mem_read  = 1'b1;
                     mem_write = 1'b0;
                 end else begin
@@ -155,3 +156,4 @@ module L2_cache #(
     end
 
 endmodule
+```
