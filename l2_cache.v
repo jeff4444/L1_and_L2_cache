@@ -1,4 +1,3 @@
-
 module L2_cache #(
     parameter DATA_WIDTH     = 32,
     parameter ADDR_WIDTH     = 32,
@@ -141,7 +140,7 @@ module L2_cache #(
                     end else begin
                         tags[index][0]         = tag;
                         data_mem[index][0]     = mem_data_block;
-                        valid[index][0]        = 1'b1;
+                        valid[index][0]        = mem_data_block;
                     end
                     // drive L1 outputs
                     l1_block_data_out = mem_data_block;
@@ -156,4 +155,3 @@ module L2_cache #(
     end
 
 endmodule
-
