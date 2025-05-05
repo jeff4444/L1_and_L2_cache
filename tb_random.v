@@ -112,8 +112,10 @@ module tb_top;
     .mem_data_in (mem_data_out),
     .mem_data_out(mem_data_in),
     .mem_ready   (mem_ready),
-    .mem_hit     (mem_hit),
-    .random_num  (random_num)
+    `ifdef TEMP
+    .random_num  (random_num),
+    `endif
+    .mem_hit     (mem_hit)
   );
 
   // Instantiate memory model

@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-
+#!/usr/bin/env python
 import argparse
 import re
-import sys
+
 def parse_log(file_path):
     events = []
     with open(file_path) as f:

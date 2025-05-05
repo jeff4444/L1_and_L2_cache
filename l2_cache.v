@@ -141,12 +141,12 @@ module L2_cache #(
                         for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
                             l2_cache_data_out[i] <= data[index][hit_way][i];
                         end
-                        $display("%0t [L2] HIT: Addr = %h", $time, l2_cache_addr);
+                        $display("%0t [L2] Cache hit: addr = 0x%h", $time, l2_cache_addr);
                     end else begin
                         mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
                         mem_read <= 1'b1;
                         l2_cache_ready <= 1'b0;
-                        $display("%0t [L2] MISS: Addr = %h", $time, l2_cache_addr);
+                        $display("%0t [L2] Cache miss: addr = 0x%h", $time, l2_cache_addr);
                     end
                 end
 
@@ -167,7 +167,7 @@ module L2_cache #(
 
                         l2_cache_ready <= 1'b1;
                         mem_read <= 1'b0;
-                        $display("%0t [L2] Allocate Complete: Addr = %h", $time, l2_cache_addr);
+                        $display("%0t [L2] Cache Allocate Complete: addr = 0x%h", $time, l2_cache_addr);
                     end
                 end
             endcase

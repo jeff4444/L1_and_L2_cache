@@ -1,12 +1,13 @@
 #!/bin/bash
 SEED=$RANDOM
 PRETTY_PRINT_FLAG=0
-
-while getopts "ps:" opt; do
+TEMP_FLAG=0
+while getopts "pts:" opt; do
   case "$opt" in
     p) PRETTY_PRINT_FLAG=1 ;;
+    t) TEMP_FLAG=1 ;;
     s) SEED="$OPTARG" ;;
-    *) echo "Usage: $0 [-p] [-s seed] [no-log]"; exit 1 ;;
+    *) echo "Usage: $0 [-p] [-t] [-s seed] [no-log]"; exit 1 ;;
   esac
 done
 shift $((OPTIND -1))
@@ -17,15 +18,25 @@ if [ "$PRETTY_PRINT_FLAG" -eq 1 ]; then
   DEFINES="$DEFINES -DPRETTY_PRINT"
 fi
 
-iverilog $DEFINES -o run.vvp tb_random.v l1_cache.v l2_cache_temp.v memory.v lfsr.v
+if [ "$TEMP_FLAG" -eq 1 ]; then
+  echo "Using temp L2"
+  DEFINES="-DTEMP $DEFINES"
+  iverilog $DEFINES -g2005-sv -o run.vvp tb_random.v l1_cache.v l2_cache_temp.v memory.v lfsr.v
+else
+  echo "Using permanent L2"
+  iverilog $DEFINES -g2005-sv -o run.vvp tb_random.v l1_cache.v l2_cache.v memory.v lfsr.v
+fi
 
 if [ "$1" = "no-log" ]; then
   vvp run.vvp
 else
   echo "Writing to log file"
-  vvp run.vvp > run.log
+  if [ "$TEMP_FLAG" -eq 1 ]; then
+    vvp run.vvp > run2.log
+  else
+    vvp run.vvp > run.log
+  fi
 fi
 
 rm run.vvp
-echo "Running Python script to parse data"
 python parse_data.py run.log

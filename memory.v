@@ -27,7 +27,17 @@ module memory #(
 
     wire [ADDR_WIDTH - 1:0] block_start;
 
+    reg [BLOCK_SIZE-1:0][DATA_WIDTH-1:0] data_out_temp;
+
     assign block_start = {addr[ADDR_WIDTH - 1:BLOCK_BITS], {BLOCK_BITS{1'b0}}}; // Align address to block size
+
+    // set data out
+    always @(*) begin
+        data_out_temp = 0;
+        for (integer i = 0; i < BLOCK_SIZE; i = i + 1) begin
+            data_out_temp[i] = mem[block_start + i];
+        end
+    end
     
     // Mem read operation
     always @(posedge clk) begin
@@ -55,10 +65,8 @@ module memory #(
                 hit       <= 1'b0;
             end else begin
                 // after 100 cycles, perform the read
-                for (integer i = 0; i < BLOCK_SIZE; i = i + 1) begin
-                    data_out[i] <= mem[{pending_addr[ADDR_WIDTH-1:BLOCK_BITS], {BLOCK_BITS{1'b0}}} + i];
-                end
-                $display("%0t [MEM] Mem hit: addr = 0x%h, data = 0x%h", $time, pending_addr, mem[{pending_addr[ADDR_WIDTH-1:BLOCK_BITS], {BLOCK_BITS{1'b0}}}]);
+                data_out <= data_out_temp;
+                $display("%0t [MEM] Mem hit: addr = 0x%h, data = 0x%h", $time, pending_addr, data_out_temp);
                 ready        <= 1'b1;
                 hit          <= 1'b1;
                 read_pending <= 1'b0;
