@@ -141,6 +141,9 @@ module L2_cache #(
             mem_addr         <= {ADDR_WIDTH{1'b0}};
             mem_data_out     <= {(BLOCK_SIZE*DATA_WIDTH){1'b0}};
             l1_block_data_out<= {(BLOCK_SIZE*DATA_WIDTH){1'b0}};
+            $display("%0t: CURR=%b, NEXT=%b, READ=%b  MEM_READ=%b", 
+            $time, curr_state, next_state, l1_cache_read, mem_read);
+
 
             case (curr_state)
                 IDLE: begin
