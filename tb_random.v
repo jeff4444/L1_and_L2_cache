@@ -221,7 +221,7 @@ module tb_top;
 
     // randomize input addresses
     for (integer i = 0; i < 10000; i = i + 1) begin
-      cpu_addr = $urandom;
+      cpu_addr = i;
       cpu_request(cpu_addr);
       wait (cpu_ready == 1);
       `ifdef PRETTY_PRINT
