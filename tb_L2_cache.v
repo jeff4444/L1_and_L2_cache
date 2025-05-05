@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module L2_cache_tb;
+module tb_L2_cache;
  
   parameter DATA_WIDTH = 32;
   parameter ADDR_WIDTH = 11;
