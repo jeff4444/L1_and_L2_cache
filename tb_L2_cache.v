@@ -28,7 +28,7 @@ module tb_L2_cache;
   L2_cache #(
     .DATA_WIDTH (DATA_WIDTH),
     .ADDR_WIDTH (ADDR_WIDTH),
-    .CACHE_SIZE (CACHE_SIZE),
+    .CACHE_SIZE (512),
     .BLOCK_SIZE (BLOCK_SIZE),
     .NUM_WAYS   (NUM_WAYS)
   ) dut (
