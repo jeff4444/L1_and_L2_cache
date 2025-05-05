@@ -82,7 +82,7 @@ module L2_cache #(
             l1_block_valid  <= 1'b0;
             mem_read        <= 1'b0;
             mem_write       <= 1'b0;
-            mem_data_out         <= '{default: {DATA_WIDTH{1'b0}}};
+            mem_data_out         <= '0;
             mem_addr             <= {ADDR_WIDTH{1'b0}};
             l1_block_data_out    <= {DATA_WIDTH{1'b0}};
             // Invalidate all lines
@@ -98,8 +98,6 @@ module L2_cache #(
             l1_cache_hit   <= 1'b0;
             mem_read       <= 1'b0;
             mem_write      <= 1'b0;
-            l2_hit         <= 1'b0;
-            update         <= 1'b0;
             next_state <= curr_state;
             
             case(curr_state)
