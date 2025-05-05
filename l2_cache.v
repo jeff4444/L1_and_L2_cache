@@ -115,7 +115,6 @@ module L2_cache #(
     // FSM & outputs
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            curr_state       <= IDLE;
             // clear outputs
             l1_cache_ready   <= 1'b0;
             l1_block_valid   <= 1'b0;
