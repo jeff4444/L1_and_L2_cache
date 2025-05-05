@@ -245,10 +245,17 @@ module tb_top;
     // Wait until reset is released
     @(posedge rst_n);
     $display("%0t [TEST] Reset released", $time);
+    `ifdef PRETTY_PRINT
+        pretty_print();
+      `endif
 
     // randomize input addresses
     for (integer i = 0; i < 10000; i = i + 1) begin
-      cpu_addr = $random(seed);
+      `ifdef RANDOM
+        cpu_addr = $random(seed);
+      `else
+        cpu_addr = i;
+      `endif
       cpu_request(cpu_addr);
       @(posedge clk);
       cpu_read = 0;

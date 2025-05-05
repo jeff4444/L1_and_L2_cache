@@ -3,13 +3,15 @@ SEED=$RANDOM
 PRETTY_PRINT_FLAG=0
 TEMP_FLAG=0
 NUM_WAYS=4 
+IS_RANDOM=1
 
-usage="Usage: $0 [-p] [-t] [-s seed] [-n num_ways] [no-log]"
+usage="Usage: $0 [-p] [-t] [-i] [-s seed] [-n num_ways] [no-log]"
 
-while getopts "pts:n:" opt; do
+while getopts "ptis:n:" opt; do
   case "$opt" in
     p) PRETTY_PRINT_FLAG=1 ;;
     t) TEMP_FLAG=1 ;;
+    i) IS_RANDOM=0 ;;
     s) SEED="$OPTARG" ;;
     n) NUM_WAYS="$OPTARG" ;;
     *) echo "$usage"; exit 1 ;;
@@ -18,18 +20,26 @@ done
 shift $((OPTIND -1))
 
 
-DEFINES="-DSEED=$SEED -DNUM_WAYS=$NUM_WAYS"
+DEFINES="-DNUM_WAYS=$NUM_WAYS"
 if [ "$PRETTY_PRINT_FLAG" -eq 1 ]; then
   DEFINES="$DEFINES -DPRETTY_PRINT"
 fi
 
-echo "Testing with SEED=$SEED and NUM_WAYS=$NUM_WAYS"
+if [ "$IS_RANDOM" -eq 1 ]; then
+  DEFINES="$DEFINES -DRANDOM -DSEED=$SEED"
+fi
+
+echo "Testing with NUM_WAYS=$NUM_WAYS"
+if [ "$IS_RANDOM" -eq 1 ]; then
+  echo "SEED = $SEED"
+else
+  echo "Incremental Addresses"
+fi
 
 if [ "$TEMP_FLAG" -eq 1 ]; then
   echo "Using temp L2"
   iverilog $DEFINES -g2005-sv -o run.vvp tb_random.v l1_cache.v l2_cache_temp.v memory.v lfsr.v
 else
-  echo "Using permanent L2"
   iverilog $DEFINES -g2005-sv -o run.vvp tb_random.v l1_cache.v l2_cache.v memory.v lfsr.v
 fi
 
