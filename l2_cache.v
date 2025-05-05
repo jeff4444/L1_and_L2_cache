@@ -9,9 +9,6 @@ module L2_cache #(
     input wire clk,
     input wire rst_n,
 
-    input wire [$clog2(NUM_WAYS)-1:0] rand_way,
-
-
     // CPU interface
     input wire [ADDR_WIDTH-1:0] l2_cache_addr,
     input wire [L1_BLOCK_SIZE-1:0][DATA_WIDTH-1:0] l2_cache_data_in,
@@ -28,7 +25,10 @@ module L2_cache #(
     output reg mem_read,
     output reg mem_write,
     input wire mem_ready,
-    input wire mem_hit
+    input wire mem_hit,
+
+    // Random way input for replacement
+    input wire [$clog2(NUM_WAYS)-1:0] rand_way
 );
 
     localparam NUM_BLOCKS = CACHE_SIZE / BLOCK_SIZE;
@@ -50,62 +50,38 @@ module L2_cache #(
     wire [BYTE_OFFSET_WIDTH-1:0] offset = l2_cache_addr[BYTE_OFFSET_WIDTH-1:0];
     wire [BYTE_OFFSET_WIDTH-1:0] start_index = (offset >> $clog2(L1_BLOCK_SIZE)) << $clog2(L1_BLOCK_SIZE);
 
-
     reg hit;
     reg [$clog2(NUM_WAYS)-1:0] hit_way;
     reg [$clog2(NUM_WAYS)-1:0] alloc_way;
+    reg found_invalid;
 
     reg [3:0] delay_cnt;
-    reg [BYTE_OFFSET_WIDTH-1:0] start_addr;
     integer i, j;
 
     assign l2_hit = hit || mem_hit;
 
-    // Determine hit
     always @(*) begin
         hit = 1'b0;
         hit_way = 0;
         for (i = 0; i < NUM_WAYS; i = i + 1) begin
             if (valid[index][i] && tags[index][i] == tag) begin
                 hit = 1'b1;
-                hit_way = i;
+                hit_way = i[$clog2(NUM_WAYS)-1:0];
             end
         end
     end
-
-    // Find a replacement way (invalid or use way 0)
-    // always @(*) begin
-    //     alloc_way = 0;
-    //     for (i = 0; i < NUM_WAYS; i = i + 1) begin
-    //         if (!valid[index][i]) begin
-    //             alloc_way = i[$clog2(NUM_WAYS)-1:0];
-    //         end
-    //     end
-    // end
-
-    
-   reg found_invalid;
 
     always @(*) begin
         found_invalid = 1'b0;
         alloc_way = rand_way; // default to random
-
         for (i = 0; i < NUM_WAYS; i = i + 1) begin
-<<<<<<< HEAD
             if (!valid[index][i] && !found_invalid) begin
                 alloc_way = i[$clog2(NUM_WAYS)-1:0];
                 found_invalid = 1'b1;
-=======
-            if (!valid[index][i]) begin
-                alloc_way = i;
->>>>>>> be8eca0bbc8cfc379c09376d07ff7f57bc851934
             end
         end
     end
 
-
-
-    // FSM transitions
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             state <= IDLE;
@@ -139,7 +115,6 @@ module L2_cache #(
         endcase
     end
 
-    // FSM outputs and behavior
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             l2_cache_ready <= 1'b0;
@@ -159,7 +134,7 @@ module L2_cache #(
                     l2_cache_ready <= 1'b0;
                     mem_read <= 1'b0;
                     mem_write <= 1'b0;
-                    delay_cnt <= 4;  // adjustable latency
+                    delay_cnt <= 4;
                 end
 
                 COMPARE_TAG: begin
@@ -170,35 +145,32 @@ module L2_cache #(
                         for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
                             l2_cache_data_out[i] <= data[index][hit_way][i];
                         end
-                        $display("%0t [L2] Cache hit: addr = 0x%h", $time, l2_cache_addr);
+                        $display("%0t [L2] HIT: Addr = %h", $time, l2_cache_addr);
                     end else begin
                         mem_addr <= {tag, index, {BYTE_OFFSET_WIDTH{1'b0}}};
                         mem_read <= 1'b1;
                         l2_cache_ready <= 1'b0;
-                        $display("%0t [L2] Cache miss: addr = 0x%h", $time, l2_cache_addr);
+                        $display("%0t [L2] MISS: Addr = %h", $time, l2_cache_addr);
                     end
                 end
 
                 ALLOCATE: begin
                     if (mem_ready || mem_hit) begin
-                        // install block
-                        data[index][alloc_way] <= mem_data_in;
+                        for (i = 0; i < BLOCK_SIZE; i = i + 1)
+                            data[index][alloc_way][i] <= mem_data_in[i];
                         tags[index][alloc_way] <= tag;
                         valid[index][alloc_way] <= 1'b1;
 
-                        // transfer L1 block
                         for (i = 0; i < L1_BLOCK_SIZE; i = i + 1) begin
-                            if ((start_index + i) < BLOCK_SIZE)begin
+                            if ((start_index + i) < BLOCK_SIZE)
                                 l2_cache_data_out[i] <= mem_data_in[start_index + i];
-                            end
-                            else begin
+                            else
                                 l2_cache_data_out[i] <= 0;
-                            end
                         end
 
                         l2_cache_ready <= 1'b1;
                         mem_read <= 1'b0;
-                        $display("%0t [L2] Cache Allocate Complete: addr = 0x%h", $time, l2_cache_addr);
+                        $display("%0t [L2] Allocate Complete: Addr = %h", $time, l2_cache_addr);
                     end
                 end
             endcase
